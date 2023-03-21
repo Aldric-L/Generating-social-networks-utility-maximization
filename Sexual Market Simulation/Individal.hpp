@@ -2,7 +2,7 @@
 //  Individal.hpp
 //  Sexual Market Simulation
 //
-//  Created by Yann Kerzreho on 21/03/2023.
+//  Created by MS&co on 21/03/2023.
 //
 
 #ifndef Individal_hpp
