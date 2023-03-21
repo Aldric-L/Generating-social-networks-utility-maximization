@@ -13,11 +13,14 @@
 #include <stdio.h>
 
 class Individual {
+private:
 	bool available_on_SMS = true;
-	int M[M_DIMENSIONS];
-	float W[M_DIMENSIONS];
+	int M[M_DIMENSIONS] const;
+	float W[M_DIMENSIONS] const;
 	int coord[2];
 	Individual* target;
+    
+public:
 };
 
 #endif /* Individual_hpp */

@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		04D8F36829C9F41600CE50D1 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 04D8F36729C9F41600CE50D1 /* main.cpp */; };
 		04D8F37929C9F65900CE50D1 /* Individual.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 04D8F37729C9F65900CE50D1 /* Individual.cpp */; };
+		04D8F37F29C9F83D00CE50D1 /* SexualMarket.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 04D8F37D29C9F83D00CE50D1 /* SexualMarket.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -28,6 +29,8 @@
 		04D8F36729C9F41600CE50D1 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		04D8F37729C9F65900CE50D1 /* Individual.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Individual.cpp; sourceTree = "<group>"; };
 		04D8F37829C9F65900CE50D1 /* Individual.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Individual.hpp; sourceTree = "<group>"; };
+		04D8F37D29C9F83D00CE50D1 /* SexualMarket.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SexualMarket.cpp; sourceTree = "<group>"; };
+		04D8F37E29C9F83D00CE50D1 /* SexualMarket.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = SexualMarket.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -44,6 +47,8 @@
 		04D8F35B29C9F41600CE50D1 = {
 			isa = PBXGroup;
 			children = (
+				04D8F37D29C9F83D00CE50D1 /* SexualMarket.cpp */,
+				04D8F37E29C9F83D00CE50D1 /* SexualMarket.hpp */,
 				04D8F37729C9F65900CE50D1 /* Individual.cpp */,
 				04D8F37829C9F65900CE50D1 /* Individual.hpp */,
 				04D8F36729C9F41600CE50D1 /* main.cpp */,
@@ -117,6 +122,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				04D8F37929C9F65900CE50D1 /* Individual.cpp in Sources */,
+				04D8F37F29C9F83D00CE50D1 /* SexualMarket.cpp in Sources */,
 				04D8F36829C9F41600CE50D1 /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
