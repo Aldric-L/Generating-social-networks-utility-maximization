@@ -10,4 +10,8 @@
 
 #include <stdio.h>
 
+class Individual {
+
+};
+
 #endif /* Individal_hpp */
