@@ -11,7 +11,17 @@
 #include <stdio.h>
 
 class SexualMarket{
+
     
+public:
+    // Constructor
+    SexualMarket(dimension) : dimension(dimension);
+    
+    // Getter
+    int getDimension() const { return dimension; }
+
+private:
+    int[2] const dimension;
 }
 
 #endif /* SexualMarket_hpp */
