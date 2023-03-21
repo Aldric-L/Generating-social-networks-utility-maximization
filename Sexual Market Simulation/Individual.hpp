@@ -32,8 +32,6 @@ class Individual {
 		std::array <int, M_DIMENSIONS> getM();
 		std::array <float, M_DIMENSIONS> getW();
 		std::array <int, 2> getCoord();
-		float[] getW();
-		int[] getCoord();
 		Individual* getTarget();
 
 };
