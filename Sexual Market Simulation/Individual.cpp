@@ -2,10 +2,21 @@
 //  Individual.cpp
 //  Sexual Market Simulation
 //
-//  Created by SMS and Associates on 21/03/2023.
+//  Created by SMS Associates on 21/03/2023.
 //
 
 #include "Individual.hpp"
+#include "SexualMarket.hpp"
+
+Individual::Individual(SexualMarket& world, std::array<int, 2> coord){
+	Individual::world = &world;
+	Individual::coord = coord;
+
+	for (int i(0); i < M_DIMENSIONS; i++) {
+		Individual::M[i] = rand();
+		Individual::W[i] = (float)rand();
+	}
+}
 
 bool Individual::is_available()
 {

@@ -2,26 +2,39 @@
 //  SexualMarket.hpp
 //  Sexual Market Simulation
 //
-//  Created by Yann Kerzreho on 21/03/2023.
+//  Created by SMS Associates on 21/03/2023.
 //
+#pragma once
+
+#include <stdio.h>
+#include <array>
+#include <vector>
 
 #ifndef SexualMarket_hpp
 #define SexualMarket_hpp
 
-#include <stdio.h>
+class Individual;
 
-class SexualMarket{
-
-    
-public:
-    // Constructor
-    SexualMarket(int[2] dimension) : dimension(dimension);
-    
-    // Getter
-    int getDimension() const { return dimension; }
+class SexualMarket {
 
 private:
-    int[2] const dimension;
-}
+    std::array<int, 2> dimension;
+    unsigned int nb_individuals;
+    std::vector<Individual*> individuals;
 
-#endif /* SexualMarket_hpp */
+public:
+    // Constructor
+    SexualMarket(std::array<int, 2> dimension, unsigned int nb_individuals);
+
+    // Getter
+    std::array<int, 2> getDimension();
+    std::vector<Individual*> getAliveIndividuals();
+
+    std::vector<Individual*> getVisibleIndividuals(int const vision, std::array<int, 2> pos);
+
+
+
+};
+
+ /* SexualMarket_hpp */
+#endif
