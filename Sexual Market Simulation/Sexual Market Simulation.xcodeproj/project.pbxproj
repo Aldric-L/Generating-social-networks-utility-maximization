@@ -41,7 +41,7 @@
 		04D8F35B29C9F41600CE50D1 = {
 			isa = PBXGroup;
 			children = (
-				04D8F36629C9F41600CE50D1 /* Sexual Market Simulation */,
+				04D8F36729C9F41600CE50D1 /* main.cpp */,
 				04D8F36529C9F41600CE50D1 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -52,14 +52,6 @@
 				04D8F36429C9F41600CE50D1 /* Sexual Market Simulation */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		04D8F36629C9F41600CE50D1 /* Sexual Market Simulation */ = {
-			isa = PBXGroup;
-			children = (
-				04D8F36729C9F41600CE50D1 /* main.cpp */,
-			);
-			path = "Sexual Market Simulation";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
