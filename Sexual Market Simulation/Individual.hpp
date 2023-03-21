@@ -15,6 +15,8 @@
 #define Individual_hpp
 
 #define M_DIMENSIONS 3
+#define BREAKAVERSION 30
+
 
 class SexualMarket;
 
@@ -24,6 +26,7 @@ class Individual {
 		std::array <int, M_DIMENSIONS> M;
 		std::array <float, M_DIMENSIONS> W;
 		std::array <int, 2> coord;
+		int delta_breaklost = BREAKAVERSION;
 		Individual* target = nullptr;
 		SexualMarket* world = nullptr;
     
