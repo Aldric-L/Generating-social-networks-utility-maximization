@@ -55,18 +55,17 @@ std::vector<Individual*> SexualMarket::getVisibleIndividuals(int const vision_ra
 	if (maxcoord[1][1] > this->getDimension()[1])
 		maxcoord[1][1] = this->getDimension()[1];
 
-	std::cout << "Pos: " << pos[0] << ":" << pos[1] << std::endl;
-	std::cout << "Max " << maxcoord[0][0] << ":" << maxcoord[0][1] << " - " << maxcoord[1][0] << ":" << maxcoord[1][1] << std::endl;
-
-	for (int i(0); i < SexualMarket::individuals.size(); i++) {
-		std::array<int, 2> coord = individuals[i]->getCoord();
+	
+	for (int i(0); i < this->individuals.size(); i++) {
+		std::array<int, 2> coord = this->individuals[i]->getCoord();
 
 		if (maxcoord[0][0] <= coord[0] &&
 			coord[0] <= maxcoord[0][1] && maxcoord[1][0] <= coord[1] 
 			&& coord[1] <= maxcoord[1][1])
-			visible_individuals.push_back(individuals[i]);
+			visible_individuals.push_back(this->individuals[i]);
 
-		return visible_individuals;
 	}
+	return visible_individuals;
+
 
 }

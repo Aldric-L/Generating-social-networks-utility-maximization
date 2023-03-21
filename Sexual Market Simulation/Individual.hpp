@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <array>
+#include <vector>
 
 #ifndef Individual_hpp
 #define Individual_hpp
@@ -38,6 +39,7 @@ class Individual {
 		std::array <float, M_DIMENSIONS> getW();
 		std::array <int, 2> getCoord();
 		Individual* getTarget();
+		std::vector <Individual*> getVisibleIndividuals();
 
 };
 

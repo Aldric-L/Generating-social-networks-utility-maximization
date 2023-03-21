@@ -14,12 +14,14 @@ int main(int argc, const char * argv[]) {
     std::cout << "Hello, World!\n";
 
 
-    // Faisons des petits tests
+    // -------- Faisons des petits tests
+    // PEtit world
     SexualMarket world({ 255, 255 }, 100);
+    // On prend un pechno au hasard
     Individual* onePechno = world.getAliveIndividuals()[42];
-    std::vector<Individual *> visibles = world.getVisibleIndividuals(100, onePechno->getCoord());
-    for (int i(0); i < visibles.size(); i++) {
-        std::cout << "Pos: " << visibles[i]->getCoord()[0] << ":" << visibles[i]->getCoord()[1] << std::endl;
+    // On liste ceux qu'il voit
+    for (int i(0); i < onePechno->getVisibleIndividuals().size(); i++) {
+        std::cout << "Pos: " << onePechno->getVisibleIndividuals()[i]->getCoord()[0] << ":" << onePechno->getVisibleIndividuals()[i]->getCoord()[1] << std::endl;
     }
     return 0;
 }

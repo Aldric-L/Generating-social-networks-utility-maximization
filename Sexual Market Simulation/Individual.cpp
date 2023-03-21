@@ -9,12 +9,12 @@
 #include "SexualMarket.hpp"
 
 Individual::Individual(SexualMarket& world, std::array<int, 2> coord){
-	Individual::world = &world;
-	Individual::coord = coord;
+	this->world = &world;
+	this->coord = coord;
 
 	for (int i(0); i < M_DIMENSIONS; i++) {
-		Individual::M[i] = rand();
-		Individual::W[i] = (float)rand();
+		this->M[i] = rand();
+		this->W[i] = (float)rand();
 	}
 }
 
@@ -41,5 +41,16 @@ std::array<int, 2> Individual::getCoord()
 Individual* Individual::getTarget()
 {
 	return Individual::target;
+}
+
+std::vector<Individual*> Individual::getVisibleIndividuals()
+{
+	std::vector<Individual*> visibles = this->world->getVisibleIndividuals(this->vision_radius, this->getCoord());
+	std::vector<Individual*> to_return;
+	for (int i(0); i < visibles.size(); i++) {
+		if (visibles[i] != this)
+			to_return.push_back(visibles[i]);
+	}
+	return to_return;
 }
 
