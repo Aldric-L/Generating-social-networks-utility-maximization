@@ -15,7 +15,7 @@ class SexualMarket{
     
 public:
     // Constructor
-    SexualMarket(dimension) : dimension(dimension);
+    SexualMarket(int[2] dimension) : dimension(dimension);
     
     // Getter
     int getDimension() const { return dimension; }
