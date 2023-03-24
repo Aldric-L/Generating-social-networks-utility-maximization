@@ -54,3 +54,16 @@ std::vector<Individual*> Individual::getVisibleIndividuals()
 	return to_return;
 }
 
+void Individual::setVisibleIndividuals()
+{
+    visibleIndividuals = getVisibleIndividuals();
+}
+
+float Individual::score(Individual &scoredIndividual)
+{
+    float score = 0
+    for(int i = 0; i < M_DIMENSIONS; i++){
+        score += getM()[i] * scoredIndividual.getM()[i];
+    }
+    return score;
+}

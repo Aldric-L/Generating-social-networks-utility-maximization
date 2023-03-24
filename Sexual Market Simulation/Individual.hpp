@@ -29,6 +29,7 @@ class Individual {
 		int delta_breaklost = BREAKAVERSION;
 		Individual* target = nullptr;
 		SexualMarket* world = nullptr;
+        std::vector <Individual*> visibleIndividuals;
     
 	protected:
 		int const vision_radius = 12;
@@ -44,6 +45,11 @@ class Individual {
 		Individual* getTarget();
 		std::vector <Individual*> getVisibleIndividuals();
 
+        // Setters
+        void setVisibleIndividuals();
+    
+        //Other
+        float score(Individual& scoredIndividual);
 };
 
 #endif /* Individual_hpp */
