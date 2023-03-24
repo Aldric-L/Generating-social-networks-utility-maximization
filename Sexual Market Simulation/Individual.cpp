@@ -59,11 +59,18 @@ void Individual::setVisibleIndividuals()
     visibleIndividuals = getVisibleIndividuals();
 }
 
-float Individual::score(Individual &scoredIndividual)
+float Individual::score(Individual& scoredIndividual)
 {
-    float score = 0
+    float score = 0;
     for(int i = 0; i < M_DIMENSIONS; i++){
         score += getM()[i] * scoredIndividual.getM()[i];
     }
     return score;
 }
+
+void Individual::setTarget(Individual* crush)
+{
+    target = crush;
+    pastTarget.push_back(crush);
+}
+

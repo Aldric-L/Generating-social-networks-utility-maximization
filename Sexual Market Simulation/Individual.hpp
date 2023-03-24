@@ -30,6 +30,7 @@ class Individual {
 		Individual* target = nullptr;
 		SexualMarket* world = nullptr;
         std::vector <Individual*> visibleIndividuals;
+        std::vector <Individual*> pastTarget;
     
 	protected:
 		int const vision_radius = 12;
@@ -47,6 +48,7 @@ class Individual {
 
         // Setters
         void setVisibleIndividuals();
+        void setTarget(Individual* crush);
     
         //Other
         float score(Individual& scoredIndividual);
