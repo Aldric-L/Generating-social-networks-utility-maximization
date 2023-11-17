@@ -9,7 +9,6 @@ CMakeFiles
 CMakeScripts
 customlaunchscript.sh
 CMakeCache.txt
-CMakeLists.txt
 CPackConfig.cmake
 CPackSourceConfig.cmake
 xcdebugger
