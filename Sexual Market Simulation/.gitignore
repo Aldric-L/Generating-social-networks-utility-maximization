@@ -1,7 +1,0 @@
-*.sln
-*.vcxproj
-*.filters
-*.user
-.vs/*
-Debug/*
-Sexual Market Simulation.xcodeproj/*
