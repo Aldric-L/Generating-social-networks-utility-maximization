@@ -22,6 +22,10 @@ std::array<bool, P_DIMENSION> Individual::getP(){
 	return Individual::P;
 }
 
-std::array<SexualMarket::Link*, GRAPH_SIZE-1>& Individual::getRelations(){
+std::array<SexualMarket::Link*, GRAPH_SIZE-1> Individual::getRelations(){
     return this->world->getIndividualRelations(this);
+}
+
+std::vector<SexualMarket::Link> Individual::getScope() {
+    return this->world->getIndividualScope(this);
 }

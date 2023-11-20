@@ -23,7 +23,8 @@ class Individual {
 		std::array <bool, P_DIMENSION> getP();
         void takeAction();
         bool responseToAction();
-        std::array<SexualMarket::Link*, GRAPH_SIZE-1>& getRelations();
+        std::array<SexualMarket::Link*, GRAPH_SIZE-1> getRelations();
+        std::vector<SexualMarket::Link> getScope();
 		
 };
 #endif /* Individual_hpp */

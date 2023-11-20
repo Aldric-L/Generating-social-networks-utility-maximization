@@ -32,6 +32,7 @@ class SexualMarket {
         void initializeLinks();
         std::array<Link*, GRAPH_SIZE-1> getIndividualRelations(Individual* indiv);
         std::array<Individual*, GRAPH_SIZE> getIndividuals();
+        std::vector<SexualMarket::Link> getIndividualScope(Individual* indiv);
 };
 
  /* SexualMarket_hpp */
