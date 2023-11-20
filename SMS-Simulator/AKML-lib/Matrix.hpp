@@ -40,8 +40,19 @@ public:
     
     std::array <std::array <element_type, COLUMNS>, ROWS> m_data;
     
+    // Default constructor
     inline Matrix(const bool fromscratch=false) : MatrixPrototype<element_type>(ROWS, COLUMNS) {
         (!fromscratch) ? m_data = Matrix<element_type, ROWS, COLUMNS>::EMPTY.m_data : Matrix<element_type, ROWS, COLUMNS>::create(this); }
+    
+    //Column-based constructor
+    inline Matrix(const std::array<akml::Matrix<element_type, ROWS, 1>, COLUMNS> cols, const bool fromscratch=false) : MatrixPrototype<element_type>(ROWS, COLUMNS) {
+        (!fromscratch) ? m_data = Matrix<element_type, ROWS, COLUMNS>::EMPTY.m_data : Matrix<element_type, ROWS, COLUMNS>::create(this);
+        for (std::size_t line=0; line < ROWS; line++){
+            for (std::size_t col=0; col < COLUMNS; col++){
+                m_data[line][col] = cols[col].read(line+1, 1);
+            }
+        }
+    }
     
     inline element_type& operator()(size_t row, size_t column)
     {

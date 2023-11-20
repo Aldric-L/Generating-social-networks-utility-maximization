@@ -38,8 +38,11 @@ namespace akml {
 
     template <typename MATRIX_INNER_TYPE, std::size_t DIM>
     inline MATRIX_INNER_TYPE inner_product(akml::Matrix<MATRIX_INNER_TYPE, DIM, 1>& a, akml::Matrix<MATRIX_INNER_TYPE, DIM, 1>& b){
-        akml::Matrix<MATRIX_INNER_TYPE, 1, DIM> b_transpose = transpose<MATRIX_INNER_TYPE, DIM, 1>(b);
-        return inner_product(a, b);
+        MATRIX_INNER_TYPE total(0);
+        for (std::size_t i=0; i <= DIM; i++){
+            total += a.read(i, 1) * b.read(i, 1);
+        }
+        return total;
     }
 
     template <typename element_type, std::size_t ROWS, std::size_t COLUMNS>

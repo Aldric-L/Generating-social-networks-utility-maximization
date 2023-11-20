@@ -14,17 +14,20 @@ class SexualMarket;
 
 class Individual {
 	protected:
-        std::array <bool, P_DIMENSION> P;
+        akml::Matrix<float, P_DIMENSION, 1> P;
+        //std::array <bool, P_DIMENSION> P;
         SexualMarket *world;
         float utility = 0;
+        float gamma;
 
 	public:
 		Individual(SexualMarket& world);
-		std::array <bool, P_DIMENSION> getP();
+        akml::Matrix<float, P_DIMENSION, 1> getP();
         void takeAction();
         bool responseToAction();
         std::array<SexualMarket::Link*, GRAPH_SIZE-1> getRelations();
         std::vector<SexualMarket::Link> getScope();
+        float computeUtility();
 		
 };
 #endif /* Individual_hpp */
