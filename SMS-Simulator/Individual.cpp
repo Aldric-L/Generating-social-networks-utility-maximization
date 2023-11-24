@@ -40,15 +40,15 @@ std::tuple<akml::Matrix<float, P_DIMENSION, GRAPH_SIZE-1>,akml::Matrix<float, GR
 
     // In order to try to avoid using dynamic matrices, we will keep fixed sized matrices with 0 where we should not have a column
     for (int i(0); i < GRAPH_SIZE-1; i++){
-        if (relations[i]->weight > 0){
             if (relations[i]->first == this){
-                P_S_temp[i] = relations[i]->second->getP();
+                if (relations[i]->weight > 0)
+                    P_S_temp[i] = relations[i]->second->getP();
                 beta(i+1, 1) = relations[i]->second;
             }else {
-                P_S_temp[i] = relations[i]->first->getP();
+                if (relations[i]->weight > 0)
+                    P_S_temp[i] = relations[i]->first->getP();
                 beta(i+1, 1) = relations[i]->first;
             }
-        }
         alpha(i+1, 1) = relations[i]->weight;
     }
     
@@ -151,7 +151,7 @@ void Individual::takeAction(){
     akml::Matrix<float, GRAPH_SIZE-1, 1> grad = Individual::computeUtilityGrad(&relations, &PS_Alpha);
     
     unsigned short int max_i = akml::arg_max(grad);
-    std::cout << "Want to take action on the coef " << max_i << " in the direction of " << grad(max_i+1, 1) << " which corresponds currently to a link of ";
+    std::cout << "Want to take action on the coef " << max_i << " in the direction of " << grad(max_i+1, 1) << " which corresponds currently to a link of " << std::get<1>(PS_Alpha)(max_i+1, 1) << " which links to the individual " << std::get<2>(PS_Alpha)(max_i+1, 1);
 }
 
 bool Individual::responseToAction(Individual* from, float new_weight){
