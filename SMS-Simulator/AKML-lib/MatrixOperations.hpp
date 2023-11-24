@@ -70,6 +70,53 @@ namespace akml {
         return Matrix<element_type, ROWS, COLUMNS>::cout(A);
         
     };
+
+    template <typename element_type, std::size_t ROWS>
+    inline std::size_t arg_max(std::array<element_type, ROWS> const& data) {
+        return static_cast<std::size_t>(std::distance(data.begin(), std::max_element(data.begin(), data.end())));
+    }
+
+    template <typename element_type, std::size_t ROWS>
+    inline std::size_t arg_min(std::array<element_type, ROWS> const& data) {
+        return static_cast<std::size_t>(std::distance(data.begin(), std::min_element(data.begin(), data.end())));
+    }
+
+    template <typename element_type, std::size_t ROWS>
+    inline std::size_t arg_max(Matrix<element_type, ROWS, 1> const& matrix) {
+        std::array<element_type, ROWS> data;
+        for (int line(0); line < ROWS; line++){
+            data[line] = matrix.read(line+1, 1);
+        }
+        return arg_max(data);
+    }
+
+    template <typename element_type, std::size_t ROWS>
+    inline std::size_t arg_min(Matrix<element_type, ROWS, 1> const& matrix) {
+        std::array<element_type, ROWS> data;
+        for (int line(0); line < ROWS; line++){
+            data[line] = matrix.read(line+1, 1);
+        }
+        return arg_min(data);
+    }
+
+    template <typename element_type, std::size_t ROWS>
+    inline std::size_t arg_max(Matrix<element_type, 1, ROWS> const& matrix) {
+        std::array<element_type, ROWS> data;
+        for (int line(0); line < ROWS; line++){
+            data[line] = matrix.read(1, line+1);
+        }
+        return arg_max(data);
+    }
+
+    template <typename element_type, std::size_t ROWS>
+    inline std::size_t arg_min(Matrix<element_type, 1, ROWS> const& matrix) {
+        std::array<element_type, ROWS> data;
+        for (int line(0); line < ROWS; line++){
+            data[line] = matrix.read(1, line+1);
+        }
+        return arg_min(data);
+    }
+
 }
 
 #endif /* MatrixOperations_h */
