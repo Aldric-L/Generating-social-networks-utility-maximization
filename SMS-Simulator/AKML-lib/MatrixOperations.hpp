@@ -82,37 +82,37 @@ namespace akml {
     }
 
     template <typename element_type, std::size_t ROWS>
-    inline std::size_t arg_max(Matrix<element_type, ROWS, 1> const& matrix) {
+    inline std::size_t arg_max(Matrix<element_type, ROWS, 1> const& matrix, const bool absval_mode=false) {
         std::array<element_type, ROWS> data;
         for (int line(0); line < ROWS; line++){
-            data[line] = matrix.read(line+1, 1);
+            data[line] = std::abs(matrix.read(line+1, 1));
         }
         return arg_max(data);
     }
 
     template <typename element_type, std::size_t ROWS>
-    inline std::size_t arg_min(Matrix<element_type, ROWS, 1> const& matrix) {
+    inline std::size_t arg_min(Matrix<element_type, ROWS, 1> const& matrix, const bool absval_mode=false) {
         std::array<element_type, ROWS> data;
         for (int line(0); line < ROWS; line++){
-            data[line] = matrix.read(line+1, 1);
+            data[line] = std::abs(matrix.read(line+1, 1));
         }
         return arg_min(data);
     }
 
     template <typename element_type, std::size_t ROWS>
-    inline std::size_t arg_max(Matrix<element_type, 1, ROWS> const& matrix) {
+    inline std::size_t arg_max(Matrix<element_type, 1, ROWS> const& matrix, const bool absval_mode=false) {
         std::array<element_type, ROWS> data;
         for (int line(0); line < ROWS; line++){
-            data[line] = matrix.read(1, line+1);
+            data[line] = std::abs(matrix.read(1, line+1));
         }
         return arg_max(data);
     }
 
     template <typename element_type, std::size_t ROWS>
-    inline std::size_t arg_min(Matrix<element_type, 1, ROWS> const& matrix) {
+    inline std::size_t arg_min(Matrix<element_type, 1, ROWS> const& matrix, const bool absval_mode=false) {
         std::array<element_type, ROWS> data;
         for (int line(0); line < ROWS; line++){
-            data[line] = matrix.read(1, line+1);
+            data[line] = std::abs(matrix.read(1, line+1));
         }
         return arg_min(data);
     }

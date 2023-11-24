@@ -88,10 +88,18 @@ std::vector<SexualMarket::Link> SexualMarket::getIndividualScope(Individual* ind
                         l.first = indiv;
                         l.second = target1;
                         l.weight = linksofTarget[level1]->weight * linksofIndividual[level0]->weight;
-                        scope.push_back(l);
+                        bool redundant = false;
+                        for (int icheck(0); icheck < scope.size(); icheck++){
+                            if ((scope[icheck].first == l.first && scope[icheck].second == l.second)
+                                || (scope[icheck].first == l.second && scope[icheck].second == l.first))
+                                redundant = true;
+                        }
+                        if (!redundant)
+                            scope.push_back(l);
                     }
                 }
             }
+            scope.push_back(*linksofIndividual[level0]);
             
         }
     }
