@@ -18,6 +18,9 @@ class SexualMarket {
             Individual* first;
             Individual* second;
             float weight;
+            
+            inline Link() {};
+            inline Link(Individual* first, Individual* second, float weight) : first(first), second(second), weight(weight) {};
         };
         
     protected:
@@ -28,11 +31,12 @@ class SexualMarket {
         SexualMarket();
         ~SexualMarket();    
     
-        //temporaire, pour l'instant l'initialisation est hardcoded
+        // WIP - for now initialization is hardcoded
         void initializeLinks();
         std::array<Link*, GRAPH_SIZE-1> getIndividualRelations(Individual* indiv);
         std::array<Individual*, GRAPH_SIZE> getIndividuals();
         std::vector<SexualMarket::Link> getIndividualScope(Individual* indiv);
+        void editLink(Individual* indiv1, Individual* indiv2, float newWeight);
 };
 
  /* SexualMarket_hpp */

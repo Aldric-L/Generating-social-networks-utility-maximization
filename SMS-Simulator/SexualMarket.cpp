@@ -105,3 +105,12 @@ std::vector<SexualMarket::Link> SexualMarket::getIndividualScope(Individual* ind
     }
     return scope;
 }
+
+// Actually, I think this method should not exists : be optimized, use pointers.
+void SexualMarket::editLink(Individual* indiv1, Individual* indiv2, float newWeight) {
+    if (indiv1 == indiv2 || indiv1 == nullptr || indiv2 == nullptr)
+        throw std::invalid_argument("Attempting to edit a non-consistent link");
+    
+    
+
+}

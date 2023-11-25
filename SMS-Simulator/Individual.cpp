@@ -8,6 +8,8 @@
 #include "Individual.hpp"
 #include "SexualMarket.hpp"
 
+using PSAndAlphaType = std::tuple<akml::Matrix<float, P_DIMENSION, GRAPH_SIZE-1>, akml::Matrix<float, GRAPH_SIZE-1, 1>, akml::Matrix<Individual*, GRAPH_SIZE-1, 1>, akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1>>;
+
 Individual::Individual(SexualMarket& world){
 	this->world = &world;
     std::random_device rd;
@@ -33,33 +35,35 @@ std::vector<SexualMarket::Link> Individual::getScope() {
     return this->world->getIndividualScope(this);
 }
 
-std::tuple<akml::Matrix<float, P_DIMENSION, GRAPH_SIZE-1>,akml::Matrix<float, GRAPH_SIZE-1, 1>, akml::Matrix<Individual*, GRAPH_SIZE-1, 1>> Individual::buildPSAndAlpha(const std::array<SexualMarket::Link*, GRAPH_SIZE-1>& relations){
+PSAndAlphaType Individual::buildPSAndAlpha(const std::array<SexualMarket::Link*, GRAPH_SIZE-1>& relations){
     std::array<akml::Matrix<float, P_DIMENSION, 1>, GRAPH_SIZE-1> P_S_temp;
+    // Weights matrix
     akml::Matrix<float, GRAPH_SIZE-1, 1> alpha;
+    // Pointers to individual matrix
     akml::Matrix<Individual*, GRAPH_SIZE-1, 1> beta;
+    // Pointers to relation matrix
+    akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> eta;
 
     // In order to try to avoid using dynamic matrices, we will keep fixed sized matrices with 0 where we should not have a column
     for (int i(0); i < GRAPH_SIZE-1; i++){
+        if (relations[i]->weight > 0){
             if (relations[i]->first == this){
-                if (relations[i]->weight > 0)
-                    P_S_temp[i] = relations[i]->second->getP();
-                if (relations[i]->weight > 0)
-                    beta(i+1, 1) = relations[i]->second;
-                else
-                    beta(i+1, 1) = nullptr;
+                P_S_temp[i] = relations[i]->second->getP();
+                beta(i+1, 1) = relations[i]->second;
             }else {
-                if (relations[i]->weight > 0)
-                    P_S_temp[i] = relations[i]->first->getP();
-                if (relations[i]->weight > 0)
-                    beta(i+1, 1) = relations[i]->first;
-                else
-                    beta(i+1, 1) = nullptr;
+                P_S_temp[i] = relations[i]->first->getP();
+                beta(i+1, 1) = relations[i]->first;
             }
+            eta(i+1, 1) = relations[i];
+        }else{
+            beta(i+1, 1) = nullptr;
+            eta(i+1, 1) = nullptr;
+        }
         alpha(i+1, 1) = relations[i]->weight;
     }
     
     akml::Matrix<float, P_DIMENSION, GRAPH_SIZE-1> P_S (P_S_temp);
-    return std::make_tuple(P_S, alpha, beta);
+    return std::make_tuple(P_S, alpha, beta, eta);
 }
 
 float Individual::computeUtility(std::array<SexualMarket::Link*, GRAPH_SIZE-1>* relations) {
@@ -111,7 +115,10 @@ float Individual::computeUtility(std::array<SexualMarket::Link*, GRAPH_SIZE-1>* 
     return LHS-RHS;
 }
 
-akml::Matrix<float, GRAPH_SIZE-1, 1> Individual::computeUtilityGrad(std::array<SexualMarket::Link*, GRAPH_SIZE-1>* relations, std::tuple<akml::Matrix<float, P_DIMENSION, GRAPH_SIZE-1>,akml::Matrix<float, GRAPH_SIZE-1, 1>, akml::Matrix<Individual*, GRAPH_SIZE-1, 1>>* PS_Alpha) {
+akml::Matrix<float, GRAPH_SIZE-1, 1> Individual::computeUtilityGrad(std::array<SexualMarket::Link*, GRAPH_SIZE-1>* relations, PSAndAlphaType* PS_Alpha) {
+    // The following lines are implemented to avoid memory leaks : pointers allow us to use this function without providing
+    // any argument. In fact, it has been done that way to allow us to not recalculate variables that have been already used
+    // in a previous calculation. By pointers, we can take back our calculations where we were.
     bool rel_td = false;
     bool ps_td = false;
     if (relations == nullptr){
@@ -120,7 +127,7 @@ akml::Matrix<float, GRAPH_SIZE-1, 1> Individual::computeUtilityGrad(std::array<S
         rel_td = true;
     }
     if (PS_Alpha == nullptr){
-        PS_Alpha = new std::tuple<akml::Matrix<float, P_DIMENSION, GRAPH_SIZE-1>,akml::Matrix<float, GRAPH_SIZE-1, 1>, akml::Matrix<Individual*, GRAPH_SIZE-1, 1>>;
+        PS_Alpha = new PSAndAlphaType;
         *PS_Alpha = this->buildPSAndAlpha(*relations);
         ps_td = true;
     }
@@ -155,6 +162,8 @@ void Individual::takeAction(){
     std::array<SexualMarket::Link*, GRAPH_SIZE-1> rel_temp;
     std::vector<SexualMarket::Link> scope = this->getScope();
     
+    // Because we want to distinguish individuals that are in the scope but with whom there is no link and those  no link
+    // with whom there is no link at all, we create a fake little link of 0.00001 for individuals in scope.
     for (std::size_t rel(0); rel < GRAPH_SIZE-1; rel++){
         rel_temp[rel] = new SexualMarket::Link;
         *rel_temp[rel] = *relations[rel];
@@ -171,21 +180,32 @@ void Individual::takeAction(){
         }
     }
 
-    std::tuple<akml::Matrix<float, P_DIMENSION, GRAPH_SIZE-1>,akml::Matrix<float, GRAPH_SIZE-1, 1>, akml::Matrix<Individual*, GRAPH_SIZE-1, 1>> PS_Alpha = this->buildPSAndAlpha(std::ref(rel_temp));
+    PSAndAlphaType PS_Alpha = this->buildPSAndAlpha(std::ref(rel_temp));
     
     std::cout << "Computing grad" << std::endl;
     akml::Matrix<float, GRAPH_SIZE-1, 1> grad = Individual::computeUtilityGrad(&relations, &PS_Alpha);
     std::cout << "Now lets reduce the grad to accessible individuals (scope=" << scope.size() << ")" << std::endl;
     for (std::size_t i(0); i < GRAPH_SIZE-1; i++){
+        // You can't select an individual that you don't see (no freehate)
         if (std::get<2>(PS_Alpha)(i+1, 1) == nullptr){
+            grad(i+1, 1) = 0;
+        // You can't reduce a friendship that does not exist
+        }else if (grad(i+1, 1) < 0 && std::get<1>(PS_Alpha)(i+1, 1) <= 0.0001 ){
             grad(i+1, 1) = 0;
         }
     }
     akml::cout_matrix(grad);
     akml::cout_matrix(std::get<2>(PS_Alpha));
     unsigned short int max_i = akml::arg_max(grad, true);
-    std::cout << "Want to take action on the coef " << max_i << " in the direction of " << grad(max_i+1, 1) << " which corresponds currently to a link of " << ((std::get<1>(PS_Alpha)(max_i+1, 1) <= 0.0001) ? 0 : std::get<1>(PS_Alpha)(max_i+1, 1)) << " which links to the individual " << std::get<2>(PS_Alpha)(max_i+1, 1);
+    float mov = std::max(0.f, ((std::get<1>(PS_Alpha)(max_i+1, 1) <= 0.0001) ? 0.f : std::get<1>(PS_Alpha)(max_i+1, 1)) + grad(max_i+1, 1));
+    std::cout << "Want to take action on the coef " << max_i << " in the direction of " << grad(max_i+1, 1) << " to reach " << mov << " which corresponds currently to a link of " << ((std::get<1>(PS_Alpha)(max_i+1, 1) <= 0.0001) ? 0 : std::get<1>(PS_Alpha)(max_i+1, 1)) << " which links to the individual " << std::get<2>(PS_Alpha)(max_i+1, 1);
+    
+    if (grad(max_i+1, 1) <= 0){
+        std::get<3>(PS_Alpha)(max_i+1, 1)->weight = mov;
+    }else {
+        std::get<2>(PS_Alpha)(max_i+1, 1)->responseToAction(this, mov);
+    }
 }
 
-bool Individual::responseToAction(Individual* from, float new_weight){
+void Individual::responseToAction(Individual* from, float new_weight){
 }
