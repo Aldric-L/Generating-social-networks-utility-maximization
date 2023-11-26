@@ -27,6 +27,12 @@ namespace akml {
             memory.push_back(std::make_pair((memory.size() == 0) ? 1 : memory.back().first+1, iteration));
         }
         
+        inline void addSave(const SaveClass iteration) {
+            SaveClass* itpoint = new SaveClass();
+            *itpoint = iteration;
+            memory.push_back(std::make_pair((memory.size() == 0) ? 1 : memory.back().first+1, itpoint));
+        }
+        
         inline void saveToCSV(const std::string filepathandname="data.csv") {
             std::ofstream file;
             file.open (filepathandname);

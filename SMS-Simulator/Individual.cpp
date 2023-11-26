@@ -8,10 +8,9 @@
 #include "Individual.hpp"
 #include "SexualMarket.hpp"
 
-using PSAndAlphaType = std::tuple<akml::Matrix<float, P_DIMENSION, GRAPH_SIZE-1>, akml::Matrix<float, GRAPH_SIZE-1, 1>, akml::Matrix<Individual*, GRAPH_SIZE-1, 1>, akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1>>;
-
-Individual::Individual(SexualMarket& world){
+Individual::Individual(SexualMarket& world, int agentid){
 	this->world = &world;
+    Individual::agentid = agentid;
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<unsigned short int> distribution(0,1);
@@ -35,7 +34,7 @@ std::vector<SexualMarket::Link> Individual::getScope() {
     return this->world->getIndividualScope(this);
 }
 
-PSAndAlphaType Individual::buildPSAndAlpha(const std::array<SexualMarket::Link*, GRAPH_SIZE-1>& relations){
+Individual::PSAndAlphaTuple Individual::buildPSAndAlpha(const std::array<SexualMarket::Link*, GRAPH_SIZE-1>& relations){
     std::array<akml::Matrix<float, P_DIMENSION, 1>, GRAPH_SIZE-1> P_S_temp;
     // Weights matrix
     akml::Matrix<float, GRAPH_SIZE-1, 1> alpha;
@@ -115,7 +114,7 @@ float Individual::computeUtility(std::array<SexualMarket::Link*, GRAPH_SIZE-1>* 
     return LHS-RHS;
 }
 
-akml::Matrix<float, GRAPH_SIZE-1, 1> Individual::computeUtilityGrad(std::array<SexualMarket::Link*, GRAPH_SIZE-1>* relations, PSAndAlphaType* PS_Alpha) {
+akml::Matrix<float, GRAPH_SIZE-1, 1> Individual::computeUtilityGrad(std::array<SexualMarket::Link*, GRAPH_SIZE-1>* relations, Individual::PSAndAlphaTuple* PS_Alpha) {
     // The following lines are implemented to avoid memory leaks : pointers allow us to use this function without providing
     // any argument. In fact, it has been done that way to allow us to not recalculate variables that have been already used
     // in a previous calculation. By pointers, we can take back our calculations where we were.
@@ -127,7 +126,7 @@ akml::Matrix<float, GRAPH_SIZE-1, 1> Individual::computeUtilityGrad(std::array<S
         rel_td = true;
     }
     if (PS_Alpha == nullptr){
-        PS_Alpha = new PSAndAlphaType;
+        PS_Alpha = new Individual::PSAndAlphaTuple;
         *PS_Alpha = this->buildPSAndAlpha(*relations);
         ps_td = true;
     }
@@ -180,7 +179,7 @@ void Individual::takeAction(){
         }
     }
 
-    PSAndAlphaType PS_Alpha = this->buildPSAndAlpha(std::ref(rel_temp));
+    Individual::PSAndAlphaTuple PS_Alpha = this->buildPSAndAlpha(std::ref(rel_temp));
     
     std::cout << "Computing grad" << std::endl;
     akml::Matrix<float, GRAPH_SIZE-1, 1> grad = Individual::computeUtilityGrad(&relations, &PS_Alpha);
@@ -201,7 +200,8 @@ void Individual::takeAction(){
     std::cout << "Want to take action on the coef " << max_i << " in the direction of " << grad(max_i+1, 1) << " to reach " << mov << " which corresponds currently to a link of " << ((std::get<1>(PS_Alpha)(max_i+1, 1) <= 0.0001) ? 0 : std::get<1>(PS_Alpha)(max_i+1, 1)) << " which links to the individual " << std::get<2>(PS_Alpha)(max_i+1, 1);
     
     if (grad(max_i+1, 1) <= 0){
-        std::get<3>(PS_Alpha)(max_i+1, 1)->weight = mov;
+        //std::get<3>(PS_Alpha)(max_i+1, 1)->weight = mov;
+        this->world->editLink(std::get<3>(PS_Alpha)(max_i+1, 1), mov);
     }else {
         std::get<2>(PS_Alpha)(max_i+1, 1)->responseToAction(this, mov);
     }

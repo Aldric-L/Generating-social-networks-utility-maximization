@@ -42,6 +42,8 @@ namespace akml {
                 parameters = std::make_tuple(params...);
             };
         
+            inline Save() : parameters_name(default_parameters_name){};
+        
             inline void setParameterNames(std::array<std::string, parameters_nb> pn){
                 parameters_name = pn;
             }
