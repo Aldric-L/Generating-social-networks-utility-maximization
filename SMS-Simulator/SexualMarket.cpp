@@ -10,9 +10,17 @@
 SexualMarket::SexualMarket(){
     SexualMarket::EdgeSaveTrackerType::default_parameters_name = {{ "round", "vertex1", "vertex2", "old_weight", "new_weight", "accepted" }};
     SexualMarket::UtilitySaveTrackerType::default_parameters_name = {{ "round", "agentid", "utility" }};
+    SexualMarket::VerticesSaveTrackerType::default_parameters_name = {{ "round", "agentid", "gamma", "P" }};
     
+    SexualMarket::VerticesSaveTrackerType* save;
     for (int indiv(0); indiv<GRAPH_SIZE; indiv++){
         individuals[indiv] = new Individual(*this, indiv);
+        std::string p = "";
+        for (int i(0); i < P_DIMENSION; i++){
+            p.insert(i, std::to_string(individuals[indiv]->getP()(i+1, 1)));
+        }
+        save = new SexualMarket::VerticesSaveTrackerType(SexualMarket::currentRound, individuals[indiv]->agentid, individuals[indiv]->gamma, p);
+        verticesTrackersManager.addSave(save);
     }
     
     int link_i(0);
@@ -29,9 +37,19 @@ SexualMarket::SexualMarket(){
 }
 
 SexualMarket::~SexualMarket(){
-    if (SHOULD_I_LOG){
+    SexualMarket::VerticesSaveTrackerType* save;
+    for (int indiv(0); indiv<GRAPH_SIZE; indiv++){
+        std::string p = "";
+        for (int i(0); i < P_DIMENSION; i++){
+            p.insert(i, std::to_string(individuals[indiv]->getP()(i+1, 1)));
+        }
+        save = new SexualMarket::VerticesSaveTrackerType(SexualMarket::currentRound, individuals[indiv]->agentid, individuals[indiv]->gamma, p);
+        verticesTrackersManager.addSave(save);
+    }
+    if (SexualMarket::SHOULD_I_LOG){
         SexualMarket::edgeTrackersManager.saveToCSV("SMS-Save-Edges.csv");
         SexualMarket::utilityTrackersManager.saveToCSV("SMS-Save-Utility.csv");
+        SexualMarket::verticesTrackersManager.saveToCSV("SMS-Save-Vertices.csv");
     }
     for (int indiv(0); indiv<GRAPH_SIZE; indiv++){
         delete individuals[indiv];
@@ -42,12 +60,21 @@ void SexualMarket::initializeLinks(){
     // Any link that is to be initialized should be saved
     SexualMarket::EdgeSaveTrackerType* save;
     int link_i(0);
+    
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<unsigned short int> distribution(1,GRAPH_SIZE);
+    
     for (int indiv(0); indiv<GRAPH_SIZE; indiv++){
         for (int indiv_t(0); indiv_t<indiv; indiv_t++){
-            if (indiv == indiv_t+1)
+            /*if (indiv == indiv_t+1)
                 SexualMarket::links[link_i].weight = 0.1;
             else if (indiv == indiv_t+7)
-                SexualMarket::links[link_i].weight = 0.5;
+                SexualMarket::links[link_i].weight = 0.5;*/
+            unsigned short int temp = distribution(gen);
+            if (temp <= 4){
+                SexualMarket::links[link_i].weight = temp * 0.1;
+            }
             
             save = new SexualMarket::EdgeSaveTrackerType(SexualMarket::currentRound, SexualMarket::links[link_i].first->agentid, SexualMarket::links[link_i].second->agentid, 0, SexualMarket::links[link_i].weight, true);
             edgeTrackersManager.addSave(save);

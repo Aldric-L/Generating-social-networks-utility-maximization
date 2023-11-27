@@ -13,11 +13,8 @@
 #include <random>
 #include <cassert>
 
-#define EN_LOG 1
-#define MAX_ITERATIONS 100
-#define GRAPH_SIZE 10
-#define P_DIMENSION 10
-#define SHOULD_I_LOG 1
+#define GRAPH_SIZE 25
+#define P_DIMENSION 100
 
 #define LINKS_NB (GRAPH_SIZE*GRAPH_SIZE-GRAPH_SIZE)/2
 

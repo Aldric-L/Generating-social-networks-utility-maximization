@@ -19,7 +19,6 @@ class Individual {
         akml::Matrix<float, P_DIMENSION, 1> P;
         SexualMarket *world;
         float utility = 0;
-        float gamma;
     
         PSAndAlphaTuple buildPSAndAlpha (const std::array<SexualMarket::Link*, GRAPH_SIZE-1>& relations);
         akml::Matrix<float, GRAPH_SIZE-1, 1> computeUtilityGrad(std::array<SexualMarket::Link*, GRAPH_SIZE-1>* relations=nullptr, PSAndAlphaTuple* PS_Alpha=nullptr);
@@ -27,6 +26,7 @@ class Individual {
         
 
 	public:
+        float gamma;
         int agentid;
 		Individual(SexualMarket& world, int agentid);
         akml::Matrix<float, P_DIMENSION, 1> getP();
