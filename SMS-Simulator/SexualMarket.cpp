@@ -29,6 +29,10 @@ SexualMarket::SexualMarket(){
 }
 
 SexualMarket::~SexualMarket(){
+    if (SHOULD_I_LOG){
+        SexualMarket::edgeTrackersManager.saveToCSV("SMS-Save-Edges.csv");
+        SexualMarket::utilityTrackersManager.saveToCSV("SMS-Save-Utility.csv");
+    }
     for (int indiv(0); indiv<GRAPH_SIZE; indiv++){
         delete individuals[indiv];
     }
@@ -58,7 +62,7 @@ std::array<SexualMarket::Link*, GRAPH_SIZE-1> SexualMarket::getIndividualRelatio
     unsigned short int incr = 0;
     for (int i(0); i < LINKS_NB; i++){
         if (SexualMarket::links[i].first == indiv || SexualMarket::links[i].second == indiv){
-            linksForIndividual[incr] = &SexualMarket::links[i];
+            linksForIndividual[incr] = &links[i];
             incr++;
         }
     }
@@ -129,4 +133,29 @@ void SexualMarket::editLink(SexualMarket::Link* link, float newWeight, bool acce
     edgeTrackersManager.addSave(save);
     if (accepted)
         link->weight = newWeight;
+}
+
+
+void SexualMarket::processARound() {
+    std::cout << "\n\n ---- ROUND " << SexualMarket::currentRound;
+    for (int i(0); i < GRAPH_SIZE; i++){
+        Individual* nodei = SexualMarket::getIndividuals()[i];
+        std::cout << "\n --Individual " << nodei << std::endl;
+        nodei->takeAction();
+    }
+    for (int i(0); i < GRAPH_SIZE; i++){
+        Individual* nodei = SexualMarket::getIndividuals()[i];
+        akml::Save<3, int, unsigned short, float> save (SexualMarket::currentRound, nodei->agentid, nodei->computeUtility(nullptr));
+        SexualMarket::utilityTrackersManager.addSave(save);
+    }
+    SexualMarket::currentRound++;
+}
+
+akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> SexualMarket::asAdjacencyMatrix(){
+    akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> output;
+    for (int l(0); l<LINKS_NB; l++){
+        output(SexualMarket::links[l].first->agentid+1, SexualMarket::links[l].second->agentid+1) = SexualMarket::links[l].weight;
+        output(SexualMarket::links[l].second->agentid+1, SexualMarket::links[l].first->agentid+1) = SexualMarket::links[l].weight;
+    }
+    return output;
 }

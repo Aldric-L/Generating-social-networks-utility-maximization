@@ -29,13 +29,13 @@ class SexualMarket {
     protected:
         int currentRound = 0;
         std::array<Individual*, GRAPH_SIZE> individuals;
-        std::array<Link, LINKS_NB> links;
         typedef akml::Save<6, int, unsigned short int, unsigned short int, float, float, bool> EdgeSaveTrackerType;
         typedef akml::Save<3, int, unsigned short int, float> UtilitySaveTrackerType;
         akml::CSV_Saver<EdgeSaveTrackerType> edgeTrackersManager;
         akml::CSV_Saver<UtilitySaveTrackerType> utilityTrackersManager;
 
     public:
+        std::array<Link, LINKS_NB> links;
         SexualMarket();
         ~SexualMarket();    
     
@@ -46,6 +46,8 @@ class SexualMarket {
         std::vector<SexualMarket::Link> getIndividualScope(Individual* indiv);
         void editLink(Individual* indiv1, Individual* indiv2, float newWeight, bool accepted=true);
         void editLink(SexualMarket::Link* link, float newWeight, bool accepted=true);
+        void processARound();
+        akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> asAdjacencyMatrix();
 
 
 };

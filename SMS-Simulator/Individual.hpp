@@ -17,7 +17,6 @@ class Individual {
         typedef std::tuple<akml::Matrix<float, P_DIMENSION, GRAPH_SIZE-1>, akml::Matrix<float, GRAPH_SIZE-1, 1>, akml::Matrix<Individual*, GRAPH_SIZE-1, 1>, akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1>> PSAndAlphaTuple;
     
         akml::Matrix<float, P_DIMENSION, 1> P;
-        //std::array <bool, P_DIMENSION> P;
         SexualMarket *world;
         float utility = 0;
         float gamma;
