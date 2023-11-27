@@ -20,7 +20,7 @@ Individual::Individual(SexualMarket& world, int agentid){
     std::normal_distribution<float> norm(0.5,0.15);
     float g = 0;
     while((g = norm(gen)) > 0.9 || g < 0.1){ g = norm(gen); }
-    Individual::gamma = g;
+    Individual::gamma = g+1;
 }
 
 akml::Matrix<float, P_DIMENSION, 1> Individual::getP(){
@@ -92,7 +92,7 @@ float Individual::computeUtility(std::array<SexualMarket::Link*, GRAPH_SIZE-1>* 
         }
         alpha(i+1, 1) = (*relations)[i]->weight;
     }
-    RHS = std::pow(RHS, 2)/(GRAPH_SIZE);
+    RHS = std::pow(RHS, 1/(Individual::gamma))/(GRAPH_SIZE);
     
     akml::Matrix<float, P_DIMENSION, GRAPH_SIZE-1> P_S (P_S_temp);
     akml::Matrix<float, GRAPH_SIZE-1, P_DIMENSION> P_S_transpose = akml::transpose(P_S);
@@ -138,7 +138,7 @@ akml::Matrix<float, GRAPH_SIZE-1, 1> Individual::computeUtilityGrad(std::array<S
         scalaralpha += (Alpha_temp(line, 1) != 0) ? std::pow(Alpha_temp(line, 1),this->gamma)/GRAPH_SIZE : 0;
     }
     
-    Alpha_temp.transform([this, &scalaralpha](float val) { return (val != 0) ? (-2)*(this->gamma)*std::pow(val, (this->gamma)-1)*scalaralpha: 0; });
+    Alpha_temp.transform([this, &scalaralpha](float val) { return (val != 0) ? (-1/(Individual::gamma))*(this->gamma)*std::pow(val, ((this->gamma)-1)/(Individual::gamma))*scalaralpha: 0; });
     grad = P_prod + Alpha_temp;
     //akml::cout_matrix(P_prod);
     //akml::cout_matrix(std::get<1>(PS_ALPHA));
