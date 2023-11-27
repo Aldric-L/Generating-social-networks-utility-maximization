@@ -155,8 +155,7 @@ akml::Matrix<float, GRAPH_SIZE-1, 1> Individual::computeUtilityGrad(std::array<S
     return grad;
 }
 
-
-void Individual::takeAction(){
+std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individual::preprocessTakeAction(Individual* target){
     std::array<SexualMarket::Link*, GRAPH_SIZE-1> relations = this->getRelations();
     std::array<SexualMarket::Link*, GRAPH_SIZE-1> rel_temp;
     std::vector<SexualMarket::Link> scope = this->getScope();
@@ -195,17 +194,59 @@ void Individual::takeAction(){
     }
     akml::cout_matrix(grad);
     akml::cout_matrix(std::get<2>(PS_Alpha));
-    unsigned short int max_i = akml::arg_max(grad, true);
-    float mov = std::max(0.f, ((std::get<1>(PS_Alpha)(max_i+1, 1) <= 0.0001) ? 0.f : std::get<1>(PS_Alpha)(max_i+1, 1)) + grad(max_i+1, 1));
-    std::cout << "Want to take action on the coef " << max_i << " in the direction of " << grad(max_i+1, 1) << " to reach " << mov << " which corresponds currently to a link of " << ((std::get<1>(PS_Alpha)(max_i+1, 1) <= 0.0001) ? 0 : std::get<1>(PS_Alpha)(max_i+1, 1)) << " which links to the individual " << std::get<2>(PS_Alpha)(max_i+1, 1);
-    
-    if (grad(max_i+1, 1) <= 0){
-        //std::get<3>(PS_Alpha)(max_i+1, 1)->weight = mov;
-        this->world->editLink(std::get<3>(PS_Alpha)(max_i+1, 1), mov);
+    if (target == nullptr){
+        unsigned short int max_i = akml::arg_max(grad, true);
+        float mov = std::max(0.f, ((std::get<1>(PS_Alpha)(max_i+1, 1) <= 0.0001) ? 0.f : std::get<1>(PS_Alpha)(max_i+1, 1)) + grad(max_i+1, 1));
+        std::cout << "Want to take action on the coef " << max_i << " in the direction of " << grad(max_i+1, 1) << " to reach " << mov << " which corresponds currently to a link of " << ((std::get<1>(PS_Alpha)(max_i+1, 1) <= 0.0001) ? 0 : std::get<1>(PS_Alpha)(max_i+1, 1)) << " which links to the individual " << std::get<2>(PS_Alpha)(max_i+1, 1);
+        
+        SexualMarket::Link newlinkwanted (std::get<3>(PS_Alpha)(max_i+1, 1)->first, std::get<3>(PS_Alpha)(max_i+1, 1)->second, mov);
+        
+        return std::make_tuple(std::get<3>(PS_Alpha)(max_i+1, 1), std::get<2>(PS_Alpha)(max_i+1, 1), newlinkwanted, (grad(max_i+1, 1) <= 0));
     }else {
-        std::get<2>(PS_Alpha)(max_i+1, 1)->responseToAction(this, mov);
+        short int target_i = -1;
+        for (unsigned short int i(0); i < GRAPH_SIZE-1; i++){
+            if (std::get<2>(PS_Alpha)(i+1, 1) == target){
+                target_i = i;
+                break;
+            }
+        }
+        
+        // target not found
+        if (target_i == -1){
+            SexualMarket::Link newlinkwanted (nullptr, nullptr, 0);
+            return std::make_tuple(nullptr, nullptr, newlinkwanted, false);
+        }
+        
+        float mov = std::max(0.f, ((std::get<1>(PS_Alpha)(target_i+1, 1) <= 0.0001) ? 0.f : std::get<1>(PS_Alpha)(target_i+1, 1)) + grad(target_i+1, 1));
+        SexualMarket::Link newlinkwanted (std::get<3>(PS_Alpha)(target_i+1, 1)->first, std::get<3>(PS_Alpha)(target_i+1, 1)->second, mov);
+        
+        return std::make_tuple(std::get<3>(PS_Alpha)(target_i+1, 1), std::get<2>(PS_Alpha)(target_i+1, 1), newlinkwanted, (grad(target_i+1, 1) <= 0));
+        
+    }
+    
+}
+
+void Individual::takeAction(){
+    std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> prefAction = Individual::preprocessTakeAction();
+    if (std::get<3>(prefAction)){
+        this->world->editLink(std::get<0>(prefAction), std::get<2>(prefAction).weight);
+    }else {
+        std::get<1>(prefAction)->responseToAction(this, std::get<2>(prefAction).weight);
     }
 }
 
 void Individual::responseToAction(Individual* from, float new_weight){
+    std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> prefAction = Individual::preprocessTakeAction(from);
+    if (std::get<0>(prefAction) != nullptr && std::get<2>(prefAction).weight > 0){
+        
+        std::cout << "Ask to respond to action of " << from << " but we move to " << std::min(new_weight, std::get<2>(prefAction).weight) << std::endl;
+        this->world->editLink(std::get<0>(prefAction), std::min(new_weight, std::get<2>(prefAction).weight));
+    }else {
+        if (std::get<2>(prefAction).weight <= 0){
+            std::cout << "Ask to respond to action of " << from << " but our desire is negative or null (" << std::get<2>(prefAction).weight << ")" << std::endl;
+            this->world->editLink(std::get<0>(prefAction), std::min(new_weight, std::get<2>(prefAction).weight), false);
+        }else{
+            std::cout << "Ask to respond to action of " << from << " but he is not found" << std::endl;
+        }
+    }
 }

@@ -8,7 +8,7 @@
 #include "Individual.hpp"
 
 SexualMarket::SexualMarket(){
-    SexualMarket::EdgeSaveTrackerType::default_parameters_name = {{ "round", "vertex1", "vertex2", "old_weight", "new_weight" }};
+    SexualMarket::EdgeSaveTrackerType::default_parameters_name = {{ "round", "vertex1", "vertex2", "old_weight", "new_weight", "accepted" }};
     SexualMarket::UtilitySaveTrackerType::default_parameters_name = {{ "round", "agentid", "utility" }};
     
     for (int indiv(0); indiv<GRAPH_SIZE; indiv++){
@@ -45,7 +45,7 @@ void SexualMarket::initializeLinks(){
             else if (indiv == indiv_t+7)
                 SexualMarket::links[link_i].weight = 0.5;
             
-            save = new SexualMarket::EdgeSaveTrackerType(SexualMarket::currentRound, SexualMarket::links[link_i].first->agentid, SexualMarket::links[link_i].second->agentid, 0, SexualMarket::links[link_i].weight);
+            save = new SexualMarket::EdgeSaveTrackerType(SexualMarket::currentRound, SexualMarket::links[link_i].first->agentid, SexualMarket::links[link_i].second->agentid, 0, SexualMarket::links[link_i].weight, true);
             edgeTrackersManager.addSave(save);
             link_i++;
         }
@@ -116,16 +116,17 @@ std::vector<SexualMarket::Link> SexualMarket::getIndividualScope(Individual* ind
 }
 
 // Actually, I think this method should not exists : be optimized, use pointers.
-void SexualMarket::editLink(Individual* indiv1, Individual* indiv2, float newWeight) {
+void SexualMarket::editLink(Individual* indiv1, Individual* indiv2, float newWeight, bool accepted) {
     if (indiv1 == indiv2 || indiv1 == nullptr || indiv2 == nullptr)
         throw std::invalid_argument("Attempting to edit a non-consistent link");
 }
 
-void SexualMarket::editLink(SexualMarket::Link* link, float newWeight) {
+void SexualMarket::editLink(SexualMarket::Link* link, float newWeight, bool accepted) {
     if (link == nullptr)
         throw std::invalid_argument("Attempting to edit a non-consistent link");
     
-    SexualMarket::EdgeSaveTrackerType save(SexualMarket::currentRound, link->first->agentid, link->second->agentid, link->weight, newWeight);
+    SexualMarket::EdgeSaveTrackerType save(SexualMarket::currentRound, link->first->agentid, link->second->agentid, link->weight, newWeight, accepted);
     edgeTrackersManager.addSave(save);
-    link->weight = newWeight;
+    if (accepted)
+        link->weight = newWeight;
 }

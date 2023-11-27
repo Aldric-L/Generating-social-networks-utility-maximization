@@ -24,6 +24,7 @@ class Individual {
     
         PSAndAlphaTuple buildPSAndAlpha (const std::array<SexualMarket::Link*, GRAPH_SIZE-1>& relations);
         akml::Matrix<float, GRAPH_SIZE-1, 1> computeUtilityGrad(std::array<SexualMarket::Link*, GRAPH_SIZE-1>* relations=nullptr, PSAndAlphaTuple* PS_Alpha=nullptr);
+        std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> preprocessTakeAction(Individual* target=nullptr);
         
 
 	public:
