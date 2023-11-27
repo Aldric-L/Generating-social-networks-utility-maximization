@@ -13,7 +13,7 @@
 #include <random>
 #include <cassert>
 
-#define GRAPH_SIZE 25
+#define GRAPH_SIZE 12
 #define P_DIMENSION 100
 
 #define LINKS_NB (GRAPH_SIZE*GRAPH_SIZE-GRAPH_SIZE)/2
