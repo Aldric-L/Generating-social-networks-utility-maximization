@@ -17,10 +17,12 @@ Individual::Individual(SexualMarket& world, int agentid){
     for (int i(0); i < P_DIMENSION; i++){
         Individual::P(i+1,1) = (distribution(gen)==1) ? 1 : 0;
     }
-    std::normal_distribution<float> norm(0.5,0.15);
+    //std::normal_distribution<float> norm(0.5,0.15);
     float g = 0;
-    while((g = norm(gen)) > 0.9 || g < 0.1){ g = norm(gen); }
-    Individual::gamma = g+1;
+    //while((g = norm(gen)) > 0.9 || g < 0.1){ g = norm(gen); }
+    std::normal_distribution<float> norm(1,0.35);
+    while((g = norm(gen)) > 1.8 || g < 0.1 || g==1){ g = norm(gen); }
+    Individual::gamma = g;
 }
 
 akml::Matrix<float, P_DIMENSION, 1> Individual::getP(){
