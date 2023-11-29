@@ -27,6 +27,7 @@ class Individual {
 
 	public:
         float gamma;
+        float delta;
         int agentid;
 		Individual(SexualMarket& world, int agentid);
         akml::Matrix<float, P_DIMENSION, 1> getP();

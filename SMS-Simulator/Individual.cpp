@@ -22,7 +22,8 @@ Individual::Individual(SexualMarket& world, int agentid){
     //while((g = norm(gen)) > 0.9 || g < 0.1){ g = norm(gen); }
     std::normal_distribution<float> norm(1,0.35);
     while((g = norm(gen)) > 1.8 || g < 0.1 || g==1){ g = norm(gen); }
-    Individual::gamma = g;
+    Individual::gamma = g+10;
+    Individual::delta = 2;
 }
 
 akml::Matrix<float, P_DIMENSION, 1> Individual::getP(){
@@ -79,6 +80,9 @@ float Individual::computeUtility(std::array<SexualMarket::Link*, GRAPH_SIZE-1>* 
     std::array<akml::Matrix<float, P_DIMENSION, 1>, GRAPH_SIZE-1> P_S_temp;
     akml::Matrix<float, GRAPH_SIZE-1, 1> alpha;
     float RHS;
+    
+    float RHS1 = 0;
+    float RHS2 = 0;
 
     
     // In order to try to avoid using dynamic matrices, we will keep fixed sized matrices with 0 where we should not have a column
@@ -93,8 +97,11 @@ float Individual::computeUtility(std::array<SexualMarket::Link*, GRAPH_SIZE-1>* 
             RHS += std::pow((*relations)[i]->weight, Individual::gamma);
         }
         alpha(i+1, 1) = (*relations)[i]->weight;
+        RHS1 += (std::pow( (*relations)[i]->weight, Individual::gamma )) / (1-std::pow((*relations)[i]->weight, Individual::gamma));
+        RHS2 += (*relations)[i]->weight;
     }
-    RHS = std::pow(RHS, 1/(Individual::gamma))/(GRAPH_SIZE);
+    //RHS = std::pow(RHS, 1/(Individual::gamma))/(GRAPH_SIZE);
+    RHS2 = std::pow(RHS2, Individual::gamma);
     
     akml::Matrix<float, P_DIMENSION, GRAPH_SIZE-1> P_S (P_S_temp);
     akml::Matrix<float, GRAPH_SIZE-1, P_DIMENSION> P_S_transpose = akml::transpose(P_S);
@@ -102,14 +109,14 @@ float Individual::computeUtility(std::array<SexualMarket::Link*, GRAPH_SIZE-1>* 
     
     P_prod.transform([](float val) { return val/P_DIMENSION; });
     
-    float LHS = akml::inner_product(alpha, P_prod) * 4;
+    float LHS = akml::inner_product(alpha, P_prod) * 10;
         
-    std::cout << "Utility : LHS=" << LHS << " RHS=" << RHS << " Total=" << LHS-RHS << "(Gamma=" << Individual::gamma << ")" << std::endl;
+    std::cout << "Utility : LHS=" << LHS << " RHS=" << RHS1+RHS2 << " Total=" << LHS-(RHS1+RHS2) << "(Gamma=" << Individual::gamma << ")" << std::endl;
     
     if (rel_td)
         delete relations;
     
-    return LHS-RHS;
+    return LHS-(RHS1+RHS2);
 }
 
 akml::Matrix<float, GRAPH_SIZE-1, 1> Individual::computeUtilityGrad(std::array<SexualMarket::Link*, GRAPH_SIZE-1>* relations, Individual::PSAndAlphaTuple* PS_Alpha) {
@@ -133,15 +140,17 @@ akml::Matrix<float, GRAPH_SIZE-1, 1> Individual::computeUtilityGrad(std::array<S
     akml::Matrix<float, GRAPH_SIZE-1, 1> grad;
     akml::Matrix<float, GRAPH_SIZE-1, P_DIMENSION> P_S_transpose = akml::transpose(PS_temp);
     akml::Matrix<float, GRAPH_SIZE-1, 1> P_prod = akml::matrix_product(P_S_transpose, this->P);
-    P_prod.transform([](float val) { return (val*4)/P_DIMENSION; });
+    P_prod.transform([](float val) { return (val*10)/P_DIMENSION; });
     
     float scalaralpha = 0;
     for (unsigned short int line(1); line <= GRAPH_SIZE-1; line++){
-        scalaralpha += (Alpha_temp(line, 1) != 0) ? std::pow(Alpha_temp(line, 1),this->gamma)/GRAPH_SIZE : 0;
+        //scalaralpha += (Alpha_temp(line, 1) != 0) ? std::pow(Alpha_temp(line, 1),this->gamma)/GRAPH_SIZE : 0;
+        scalaralpha += Alpha_temp(line, 1);
     }
-    
-    Alpha_temp.transform([this, &scalaralpha](float val) { return (val != 0) ? (-1/(Individual::gamma))*(this->gamma)*std::pow(val, ((this->gamma)-1)/(Individual::gamma))*scalaralpha: 0; });
-    grad = P_prod + Alpha_temp;
+    scalaralpha = std::pow(scalaralpha, (Individual::delta-1))*Individual::delta;
+    Alpha_temp.transform([this, &scalaralpha](float val) { return (val != 0 && val!= std::pow(val, Individual::gamma)) ? Individual::gamma * std::pow(val, (Individual::gamma-1)) / std::pow(1 - std::pow(val, Individual::gamma), 2) + scalaralpha : 0; });
+    grad = P_prod - Alpha_temp;
+    grad.transform([](float val) { return val/10; });
     //akml::cout_matrix(P_prod);
     //akml::cout_matrix(std::get<1>(PS_ALPHA));
     akml::cout_matrix(grad);
