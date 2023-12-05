@@ -211,7 +211,7 @@ std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individua
     //akml::cout_matrix(std::get<2>(PS_Alpha));
     if (target == nullptr){
         unsigned short int max_i = akml::arg_max(grad, true);
-        if (std::abs(grad(max_i+1, 1)) < 0.001){
+        if (std::abs(grad(max_i+1, 1)) < 0.01){
             std::cout << "Want to do an unsignifiant action. Aborted.";
             SexualMarket::Link newlinkwanted (nullptr, nullptr, 0);
             return std::make_tuple(nullptr, nullptr, newlinkwanted, false);
