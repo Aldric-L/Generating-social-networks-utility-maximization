@@ -47,9 +47,9 @@ SexualMarket::~SexualMarket(){
         verticesTrackersManager.addSave(save);
     }
     if (SexualMarket::SHOULD_I_LOG){
-        SexualMarket::edgeTrackersManager.saveToCSV("SMS-Save-Edges.csv");
-        SexualMarket::utilityTrackersManager.saveToCSV("SMS-Save-Utility.csv");
-        SexualMarket::verticesTrackersManager.saveToCSV("SMS-Save-Vertices.csv");
+        SexualMarket::edgeTrackersManager.saveToCSV("SMS-Save-Edges.csv", false);
+        SexualMarket::utilityTrackersManager.saveToCSV("SMS-Save-Utility.csv", false);
+        SexualMarket::verticesTrackersManager.saveToCSV("SMS-Save-Vertices.csv", false);
     }
     for (int indiv(0); indiv<GRAPH_SIZE; indiv++){
         delete individuals[indiv];
@@ -163,12 +163,13 @@ void SexualMarket::editLink(SexualMarket::Link* link, float newWeight, bool acce
 }
 
 
-void SexualMarket::processARound() {
+unsigned int SexualMarket::processARound() {
     std::cout << "\n\n ---- ROUND " << SexualMarket::currentRound;
+    unsigned int inactions(0);
     for (int i(0); i < GRAPH_SIZE; i++){
         Individual* nodei = SexualMarket::getIndividuals()[i];
         std::cout << "\n --Individual " << nodei << std::endl;
-        nodei->takeAction();
+        inactions += nodei->takeAction() ? 0 : 1;
     }
     for (int i(0); i < GRAPH_SIZE; i++){
         Individual* nodei = SexualMarket::getIndividuals()[i];
@@ -176,6 +177,7 @@ void SexualMarket::processARound() {
         SexualMarket::utilityTrackersManager.addSave(save);
     }
     SexualMarket::currentRound++;
+    return inactions;
 }
 
 akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> SexualMarket::asAdjacencyMatrix(){

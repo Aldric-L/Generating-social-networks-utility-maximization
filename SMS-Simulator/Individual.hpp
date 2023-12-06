@@ -31,8 +31,8 @@ class Individual {
         int agentid;
 		Individual(SexualMarket& world, int agentid);
         akml::Matrix<float, P_DIMENSION, 1> getP();
-        void takeAction();
-        void responseToAction(Individual* from, float new_weight);
+        bool takeAction();
+        bool responseToAction(Individual* from, float new_weight);
         std::array<SexualMarket::Link*, GRAPH_SIZE-1> getRelations();
         std::vector<SexualMarket::Link> getScope();
         float computeUtility(std::array<SexualMarket::Link*, GRAPH_SIZE-1>* relations);

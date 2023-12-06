@@ -49,7 +49,7 @@ class SexualMarket {
         std::vector<SexualMarket::Link> getIndividualScope(Individual* indiv);
         void editLink(Individual* indiv1, Individual* indiv2, float newWeight, bool accepted=true);
         void editLink(SexualMarket::Link* link, float newWeight, bool accepted=true);
-        void processARound();
+        unsigned int processARound();
         akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> asAdjacencyMatrix();
 
 

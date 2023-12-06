@@ -247,20 +247,23 @@ std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individua
     
 }
 
-void Individual::takeAction(){
+bool Individual::takeAction(){
     std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> prefAction = Individual::preprocessTakeAction();
     if (std::get<3>(prefAction) && std::get<0>(prefAction) != nullptr){
         this->world->editLink(std::get<0>(prefAction), std::get<2>(prefAction).weight, true);
+        return true;
     }else if (std::get<1>(prefAction) != nullptr) {
-        std::get<1>(prefAction)->responseToAction(this, std::get<2>(prefAction).weight);
+        return std::get<1>(prefAction)->responseToAction(this, std::get<2>(prefAction).weight);
     }
+    return false;
 }
 
-void Individual::responseToAction(Individual* from, float new_weight){
+bool Individual::responseToAction(Individual* from, float new_weight){
     std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> prefAction = Individual::preprocessTakeAction(from);
     if (std::get<0>(prefAction) != nullptr && std::get<2>(prefAction).weight > 0){
         std::cout << "Ask to respond to action of " << from << " but we move to " << std::min(new_weight, std::get<2>(prefAction).weight) << std::endl;
         this->world->editLink(std::get<0>(prefAction), std::min(new_weight, std::get<2>(prefAction).weight), true);
+        return true;
     }else if (std::get<0>(prefAction) != nullptr) {
         if (std::get<2>(prefAction).weight <= 0){
             std::cout << "Ask to respond to action of " << from << " but our desire is negative or null (" << std::get<2>(prefAction).weight << ")" << std::endl;
@@ -269,4 +272,5 @@ void Individual::responseToAction(Individual* from, float new_weight){
             std::cout << "Ask to respond to action of " << from << " but he is not found" << std::endl;
         }
     }
+    return false;
 }

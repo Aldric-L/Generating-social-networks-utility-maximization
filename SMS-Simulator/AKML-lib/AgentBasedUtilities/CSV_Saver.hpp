@@ -33,12 +33,16 @@ namespace akml {
             memory.push_back(std::make_pair((memory.size() == 0) ? 1 : memory.back().first+1, itpoint));
         }
         
-        inline void saveToCSV(const std::string filepathandname="data.csv") {
+        inline void saveToCSV(const std::string filepathandname="data.csv", bool iteration=true) {
             std::ofstream file;
             file.open (filepathandname);
-            file << "iteration," << memory[0].second->printTitleAsCSV() <<"\n";
+            if (iteration)
+                file << "iteration,";
+            file << memory[0].second->printTitleAsCSV() <<"\n";
             for (int it(0); it < memory.size(); it++){
-                file << it << "," << memory[it].second->printAsCSV() <<"\n";
+                if (iteration)
+                    file << it << ",";
+                file << memory[it].second->printAsCSV() <<"\n";
             }
             file.close();
         }

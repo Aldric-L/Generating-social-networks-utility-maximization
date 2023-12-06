@@ -41,8 +41,19 @@ int main(int argc, const char * argv[]) {
     std::cout << "\n A look to the initialization adjacency matrix : \n";
     akml::cout_matrix(sm.asAdjacencyMatrix());
     int rounds = std::stoi(roundsinput);
+    unsigned short int inactive_consecutive_rounds_counter(0);
     for (int i(0); i < rounds; i++){
-        sm.processARound();
+        if (inactive_consecutive_rounds_counter == 3){
+            std::cout << "\n\n\n Inactivity detected - Stopping generation at round " << i;
+            break;
+        }
+        
+        unsigned int in(0);
+        if ((in = sm.processARound()) == GRAPH_SIZE)
+            inactive_consecutive_rounds_counter++;
+        else
+            inactive_consecutive_rounds_counter=0;
+        //std::cout << "\n\n\n Inactivity = " << in;
     }
     std::cout << "\n A look to the final adjacency matrix : \n";
     akml::cout_matrix(sm.asAdjacencyMatrix());
