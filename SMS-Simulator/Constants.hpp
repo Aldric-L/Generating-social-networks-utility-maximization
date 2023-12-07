@@ -15,7 +15,7 @@
 #include <ctime>
 #include <chrono>
 
-#define GRAPH_SIZE 12
+#define GRAPH_SIZE 610
 #define P_DIMENSION 100
 
 #define LINKS_NB (GRAPH_SIZE*GRAPH_SIZE-GRAPH_SIZE)/2

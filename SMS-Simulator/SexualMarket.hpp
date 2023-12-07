@@ -27,11 +27,11 @@ class SexualMarket {
         };
         
     protected:
-        int currentRound = 0;
+        std::size_t currentRound = 0;
         std::array<Individual*, GRAPH_SIZE> individuals;
-        typedef akml::Save<6, int, unsigned short int, unsigned short int, float, float, bool> EdgeSaveTrackerType;
-        typedef akml::Save<3, int, unsigned short int, float> UtilitySaveTrackerType;
-        typedef akml::Save<4, unsigned int, unsigned int, float, std::string> VerticesSaveTrackerType;
+        typedef akml::Save<6, std::size_t, unsigned long int, unsigned long int, float, float, bool> EdgeSaveTrackerType;
+        typedef akml::Save<3, std::size_t, unsigned long int, float> UtilitySaveTrackerType;
+        typedef akml::Save<4, std::size_t, unsigned long int, float, std::string> VerticesSaveTrackerType;
         akml::CSV_Saver<EdgeSaveTrackerType> edgeTrackersManager;
         akml::CSV_Saver<UtilitySaveTrackerType> utilityTrackersManager;
         akml::CSV_Saver<VerticesSaveTrackerType> verticesTrackersManager;

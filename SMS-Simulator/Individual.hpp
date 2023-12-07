@@ -28,8 +28,8 @@ class Individual {
 	public:
         float gamma;
         float delta;
-        int agentid;
-		Individual(SexualMarket& world, int agentid);
+        unsigned long int agentid;
+		Individual(SexualMarket& world, unsigned long int agentid);
         akml::Matrix<float, P_DIMENSION, 1> getP();
         bool takeAction();
         bool responseToAction(Individual* from, float new_weight);

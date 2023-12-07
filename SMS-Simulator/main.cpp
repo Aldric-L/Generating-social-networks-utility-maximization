@@ -21,7 +21,7 @@ int main(int argc, const char * argv[]) {
     std::string roundsinput = "";
     
     while (!is_number(roundsinput)){
-        std::cout << "How many round would you like to simulate ? ";
+        std::cout << "How many rounds would you like to simulate ? ";
         std::cin >> roundsinput;
     }
     std::string log = "";
@@ -47,15 +47,13 @@ int main(int argc, const char * argv[]) {
     if (threads_nb > 1)
         std::cout.setstate(std::ios_base::failbit);
     
-    std::vector<SexualMarket> worlds;
-    std::vector<std::thread> threads;
-    auto processGame = [](int rounds) {
+    auto processGame = [](int rds) {
         SexualMarket sm;
         sm.initializeLinks();
         std::cout << "\n A look to the initialization adjacency matrix : \n";
         akml::cout_matrix(sm.asAdjacencyMatrix());
         unsigned short int inactive_consecutive_rounds_counter(0);
-        for (int i(0); i < rounds; i++){
+        for (int i(0); i < rds; i++){
                 if (inactive_consecutive_rounds_counter == 3){
                     std::cout << "\n\n\n Inactivity detected - Stopping generation at round " << i;
                     break;
@@ -69,14 +67,20 @@ int main(int argc, const char * argv[]) {
         std::cout << "\n A look to the final adjacency matrix : \n";
         akml::cout_matrix(sm.asAdjacencyMatrix());
     };
-    for (int th(0); th < threads_nb; th++){
-        std::thread thread(std::ref(processGame), rounds);
-        threads.push_back(std::move(thread));
+    if (threads_nb > 1){
+        std::vector<std::thread> threads;
+        for (int th(0); th < threads_nb; th++){
+            std::thread thread(std::ref(processGame), rounds);
+            threads.push_back(std::move(thread));
+        }
+        for (int th(0); th < threads_nb; th++){
+            if (threads[th].joinable())
+                threads[th].join();
+        }
+    }else {
+        processGame(rounds);
     }
-    for (int th(0); th < threads_nb; th++){
-        if (threads[th].joinable())
-            threads[th].join();
-    }
+    
     if (threads_nb > 1)
         std::cout.clear();
     

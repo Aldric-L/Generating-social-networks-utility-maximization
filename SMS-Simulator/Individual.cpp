@@ -8,13 +8,13 @@
 #include "Individual.hpp"
 #include "SexualMarket.hpp"
 
-Individual::Individual(SexualMarket& world, int agentid){
+Individual::Individual(SexualMarket& world, unsigned long int agentid){
 	this->world = &world;
     Individual::agentid = agentid;
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<unsigned short int> distribution(0,1);
-    for (int i(0); i < P_DIMENSION; i++){
+    for (std::size_t i(0); i < P_DIMENSION; i++){
         Individual::P(i+1,1) = (distribution(gen)==1) ? 1 : 0;
     }
     //std::normal_distribution<float> norm(0.5,0.15);
@@ -48,7 +48,7 @@ Individual::PSAndAlphaTuple Individual::buildPSAndAlpha(const std::array<SexualM
     akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> eta;
 
     // In order to try to avoid using dynamic matrices, we will keep fixed sized matrices with 0 where we should not have a column
-    for (int i(0); i < GRAPH_SIZE-1; i++){
+    for (std::size_t i(0); i < GRAPH_SIZE-1; i++){
         if (relations[i]->weight > 0){
             if (relations[i]->first == this){
                 P_S_temp[i] = relations[i]->second->getP();
@@ -59,6 +59,7 @@ Individual::PSAndAlphaTuple Individual::buildPSAndAlpha(const std::array<SexualM
             }
             eta(i+1, 1) = relations[i];
         }else{
+            P_S_temp[i] = akml::Matrix<float, P_DIMENSION, 1>::EMPTY;
             beta(i+1, 1) = nullptr;
             eta(i+1, 1) = nullptr;
         }
@@ -76,7 +77,7 @@ float Individual::computeUtility(std::array<SexualMarket::Link*, GRAPH_SIZE-1>* 
         *relations = this->getRelations();
         rel_td = true;
     }
-    unsigned short int effectiveRelationCount = 0;
+    std::size_t effectiveRelationCount = 0;
     std::array<akml::Matrix<float, P_DIMENSION, 1>, GRAPH_SIZE-1> P_S_temp;
     akml::Matrix<float, GRAPH_SIZE-1, 1> alpha;
     float RHS = 0;
@@ -86,7 +87,7 @@ float Individual::computeUtility(std::array<SexualMarket::Link*, GRAPH_SIZE-1>* 
 
     
     // In order to try to avoid using dynamic matrices, we will keep fixed sized matrices with 0 where we should not have a column
-    for (int i(0); i < GRAPH_SIZE-1; i++){
+    for (std::size_t i(0); i < GRAPH_SIZE-1; i++){
         if ((*relations)[i]->weight > 0){
             effectiveRelationCount++;
             if ((*relations)[i]->first == this){
@@ -136,15 +137,17 @@ akml::Matrix<float, GRAPH_SIZE-1, 1> Individual::computeUtilityGrad(std::array<S
         *PS_Alpha = this->buildPSAndAlpha(*relations);
         ps_td = true;
     }
-    akml::Matrix<float, P_DIMENSION, GRAPH_SIZE-1> PS_temp = std::get<0>(*PS_Alpha);
+    // In order to access to wider memory space, we use a pointer
+    //akml::Matrix<float, P_DIMENSION, GRAPH_SIZE-1> PS_temp = std::get<0>(*PS_Alpha);
     akml::Matrix<float, GRAPH_SIZE-1, 1> Alpha_temp = std::get<1>(*PS_Alpha);
     akml::Matrix<float, GRAPH_SIZE-1, 1> grad;
-    akml::Matrix<float, GRAPH_SIZE-1, P_DIMENSION> P_S_transpose = akml::transpose(PS_temp);
+    akml::Matrix<float, GRAPH_SIZE-1, P_DIMENSION> P_S_transpose = akml::transpose(std::get<0>(*PS_Alpha));
     akml::Matrix<float, GRAPH_SIZE-1, 1> P_prod = akml::matrix_product(P_S_transpose, this->P);
+    
     P_prod.transform([](float val) { return (val*10)/P_DIMENSION; });
     
     float scalaralpha = 0;
-    for (unsigned short int line(1); line <= GRAPH_SIZE-1; line++){
+    for (std::size_t line(1); line <= GRAPH_SIZE-1; line++){
         //scalaralpha += (Alpha_temp(line, 1) != 0) ? std::pow(Alpha_temp(line, 1),this->gamma)/GRAPH_SIZE : 0;
         scalaralpha += Alpha_temp(line, 1);
     }
@@ -155,7 +158,6 @@ akml::Matrix<float, GRAPH_SIZE-1, 1> Individual::computeUtilityGrad(std::array<S
     //akml::cout_matrix(P_prod);
     //akml::cout_matrix(std::get<1>(PS_ALPHA));
     //akml::cout_matrix(grad);
-    
     if (rel_td)
         delete relations;
     if (ps_td)
@@ -189,7 +191,7 @@ std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individua
         true_eta(rel+1, 1) = relations[rel];
     }
 
-    Individual::PSAndAlphaTuple PS_Alpha = this->buildPSAndAlpha(std::ref(rel_temp));
+    Individual::PSAndAlphaTuple PS_Alpha = this->buildPSAndAlpha(rel_temp);
     
     //We delete temp pointers
     for (std::size_t rel(0); rel < GRAPH_SIZE-1; rel++){
@@ -211,7 +213,7 @@ std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individua
     //akml::cout_matrix(grad);
     //akml::cout_matrix(std::get<2>(PS_Alpha));
     if (target == nullptr){
-        unsigned short int max_i = akml::arg_max(grad, true);
+        std::size_t max_i = akml::arg_max(grad, true);
         if (std::abs(grad(max_i+1, 1)) < 0.01){
             std::cout << "\nWant to do an unsignifiant action. Aborted.";
             SexualMarket::Link newlinkwanted (nullptr, nullptr, 0);
@@ -225,8 +227,8 @@ std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individua
         
         return std::make_tuple(true_eta(max_i+1, 1), std::get<2>(PS_Alpha)(max_i+1, 1), newlinkwanted, (grad(max_i+1, 1) <= 0));
     }else {
-        short int target_i = -1;
-        for (unsigned short int i(0); i < GRAPH_SIZE-1; i++){
+        long int target_i = -1;
+        for (std::size_t i(0); i < GRAPH_SIZE-1; i++){
             if (std::get<2>(PS_Alpha)(i+1, 1) == target){
                 target_i = i;
                 break;
