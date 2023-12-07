@@ -17,7 +17,7 @@ SexualMarket::SexualMarket(){
         individuals[indiv] = new Individual(*this, indiv);
         std::string p = "";
         for (int i(0); i < P_DIMENSION; i++){
-            p.insert(i, std::to_string(individuals[indiv]->getP()(i+1, 1)));
+            p.push_back( char( individuals[indiv]->getP()(i+1, 1) + 48) );
         }
         save = new SexualMarket::VerticesSaveTrackerType(SexualMarket::currentRound, individuals[indiv]->agentid, individuals[indiv]->gamma, p);
         verticesTrackersManager.addSave(save);
@@ -41,17 +41,17 @@ SexualMarket::~SexualMarket(){
     for (int indiv(0); indiv<GRAPH_SIZE; indiv++){
         std::string p = "";
         for (int i(0); i < P_DIMENSION; i++){
-            p.insert(i, std::to_string(individuals[indiv]->getP()(i+1, 1)));
+            p.push_back( char( individuals[indiv]->getP()(i+1, 1) + 48) );
         }
         save = new SexualMarket::VerticesSaveTrackerType(SexualMarket::currentRound, individuals[indiv]->agentid, individuals[indiv]->gamma, p);
         verticesTrackersManager.addSave(save);
     }
     if (SexualMarket::SHOULD_I_LOG){
-        long int t = static_cast<long int> (time(NULL));
+        long int t = static_cast<long int> (std::clock());
         std::string curt = std::to_string(t);
-        SexualMarket::edgeTrackersManager.saveToCSV("SMS-Save-Edges " + curt + ".csv", false);
-        SexualMarket::utilityTrackersManager.saveToCSV("SMS-Save-Utility " + curt + ".csv", false);
-        SexualMarket::verticesTrackersManager.saveToCSV("SMS-Save-Vertices"  + curt + ".csv", false);
+        SexualMarket::edgeTrackersManager.saveToCSV("SMS-Save-Edges-" + curt + ".csv", false);
+        SexualMarket::utilityTrackersManager.saveToCSV("SMS-Save-Utility-" + curt + ".csv", false);
+        SexualMarket::verticesTrackersManager.saveToCSV("SMS-Save-Vertices-"  + curt + ".csv", false);
     }
     for (int indiv(0); indiv<GRAPH_SIZE; indiv++){
         delete individuals[indiv];
@@ -152,6 +152,14 @@ std::vector<SexualMarket::Link> SexualMarket::getIndividualScope(Individual* ind
 void SexualMarket::editLink(Individual* indiv1, Individual* indiv2, float newWeight, bool accepted) {
     if (indiv1 == indiv2 || indiv1 == nullptr || indiv2 == nullptr)
         throw std::invalid_argument("Attempting to edit a non-consistent link");
+    
+    for (int link_i(0); link_i<LINKS_NB; link_i++){
+        if ((SexualMarket::links[link_i].first == indiv1 && SexualMarket::links[link_i].second == indiv2)
+            || (SexualMarket::links[link_i].second == indiv1 && SexualMarket::links[link_i].first == indiv2)){
+            SexualMarket::editLink(&SexualMarket::links[link_i], newWeight, accepted);
+            break;
+        }
+    }
 }
 
 void SexualMarket::editLink(SexualMarket::Link* link, float newWeight, bool accepted) {
