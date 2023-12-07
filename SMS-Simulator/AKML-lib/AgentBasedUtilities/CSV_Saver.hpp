@@ -29,11 +29,13 @@ namespace akml {
         
         inline void addSave(const SaveClass iteration) {
             SaveClass* itpoint = new SaveClass();
-            *itpoint = iteration;
+            *itpoint = std::move(iteration);
             memory.push_back(std::make_pair((memory.size() == 0) ? 1 : memory.back().first+1, itpoint));
         }
         
         inline void saveToCSV(const std::string filepathandname="data.csv", bool iteration=true) {
+            if (memory.size() == 0)
+                throw std::runtime_error("Trying to print log but the memory is empty...");
             std::ofstream file;
             file.open (filepathandname);
             if (iteration)

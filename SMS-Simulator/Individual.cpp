@@ -79,7 +79,7 @@ float Individual::computeUtility(std::array<SexualMarket::Link*, GRAPH_SIZE-1>* 
     unsigned short int effectiveRelationCount = 0;
     std::array<akml::Matrix<float, P_DIMENSION, 1>, GRAPH_SIZE-1> P_S_temp;
     akml::Matrix<float, GRAPH_SIZE-1, 1> alpha;
-    float RHS;
+    float RHS = 0;
     
     float RHS1 = 0;
     float RHS2 = 0;
@@ -94,11 +94,12 @@ float Individual::computeUtility(std::array<SexualMarket::Link*, GRAPH_SIZE-1>* 
             }else {
                 P_S_temp[i] = (*relations)[i]->first->getP();
             }
-            RHS += std::pow((*relations)[i]->weight, Individual::gamma);
+            //RHS += std::pow((*relations)[i]->weight, Individual::gamma);
+            RHS1 += (std::pow( (*relations)[i]->weight, Individual::gamma )) / (1-std::pow((*relations)[i]->weight, Individual::gamma));
+            RHS2 += (*relations)[i]->weight;
         }
         alpha(i+1, 1) = (*relations)[i]->weight;
-        RHS1 += (std::pow( (*relations)[i]->weight, Individual::gamma )) / (1-std::pow((*relations)[i]->weight, Individual::gamma));
-        RHS2 += (*relations)[i]->weight;
+        
     }
     //RHS = std::pow(RHS, 1/(Individual::gamma))/(GRAPH_SIZE);
     RHS2 = std::pow(RHS2, Individual::gamma);
@@ -153,7 +154,7 @@ akml::Matrix<float, GRAPH_SIZE-1, 1> Individual::computeUtilityGrad(std::array<S
     grad.transform([](float val) { return val/10; });
     //akml::cout_matrix(P_prod);
     //akml::cout_matrix(std::get<1>(PS_ALPHA));
-    akml::cout_matrix(grad);
+    //akml::cout_matrix(grad);
     
     if (rel_td)
         delete relations;
@@ -197,7 +198,7 @@ std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individua
     
     std::cout << "Computing grad" << std::endl;
     akml::Matrix<float, GRAPH_SIZE-1, 1> grad = Individual::computeUtilityGrad(&relations, &PS_Alpha);
-    std::cout << "Now lets reduce the grad to accessible individuals (scope=" << scope.size() << ")" << std::endl;
+    //std::cout << "Now let's reduce the grad to accessible individuals (scope=" << scope.size() << ")" << std::endl;
     for (std::size_t i(0); i < GRAPH_SIZE-1; i++){
         // You can't select an individual that you don't see (no freehate)
         if (std::get<2>(PS_Alpha)(i+1, 1) == nullptr){
@@ -207,17 +208,17 @@ std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individua
             grad(i+1, 1) = 0;
         }
     }
-    akml::cout_matrix(grad);
+    //akml::cout_matrix(grad);
     //akml::cout_matrix(std::get<2>(PS_Alpha));
     if (target == nullptr){
         unsigned short int max_i = akml::arg_max(grad, true);
         if (std::abs(grad(max_i+1, 1)) < 0.01){
-            std::cout << "Want to do an unsignifiant action. Aborted.";
+            std::cout << "\nWant to do an unsignifiant action. Aborted.";
             SexualMarket::Link newlinkwanted (nullptr, nullptr, 0);
             return std::make_tuple(nullptr, nullptr, newlinkwanted, false);
         }
         float mov = std::max(0.f, ((std::get<1>(PS_Alpha)(max_i+1, 1) <= 0.0001) ? 0.f : std::get<1>(PS_Alpha)(max_i+1, 1)) + grad(max_i+1, 1));
-        std::cout << "Want to take action on the coef " << max_i << " in the direction of " << grad(max_i+1, 1) << " to reach " << mov << " which corresponds currently to a link of " << ((std::get<1>(PS_Alpha)(max_i+1, 1) <= 0.0001) ? 0 : std::get<1>(PS_Alpha)(max_i+1, 1)) << " which links to the individual " << std::get<2>(PS_Alpha)(max_i+1, 1);
+        std::cout << "\nWant to take action on the coef " << max_i << " in the direction of " << grad(max_i+1, 1) << " to reach " << mov << " which corresponds currently to a link of " << ((std::get<1>(PS_Alpha)(max_i+1, 1) <= 0.0001) ? 0 : std::get<1>(PS_Alpha)(max_i+1, 1)) << " which links to the individual " << std::get<2>(PS_Alpha)(max_i+1, 1);
         //std::cout << "We verifiy true_eta : " << true_eta(max_i+1, 1)->first << " - " << true_eta(max_i+1, 1)->second << " - " << true_eta(max_i+1, 1)->weight << "\n";
         
         SexualMarket::Link newlinkwanted (true_eta(max_i+1, 1)->first, true_eta(max_i+1, 1)->second, mov);
@@ -261,15 +262,15 @@ bool Individual::takeAction(){
 bool Individual::responseToAction(Individual* from, float new_weight){
     std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> prefAction = Individual::preprocessTakeAction(from);
     if (std::get<0>(prefAction) != nullptr && std::get<2>(prefAction).weight > 0){
-        std::cout << "Ask to respond to action of " << from << " but we move to " << std::min(new_weight, std::get<2>(prefAction).weight) << std::endl;
+        std::cout << "\nAsk to respond to action of " << from << " but we move to " << std::min(new_weight, std::get<2>(prefAction).weight) << std::endl;
         this->world->editLink(std::get<0>(prefAction), std::min(new_weight, std::get<2>(prefAction).weight), true);
         return true;
     }else if (std::get<0>(prefAction) != nullptr) {
         if (std::get<2>(prefAction).weight <= 0){
-            std::cout << "Ask to respond to action of " << from << " but our desire is negative or null (" << std::get<2>(prefAction).weight << ")" << std::endl;
+            std::cout << "\nAsk to respond to action of " << from << " but our desire is negative or null (" << std::get<2>(prefAction).weight << ")" << std::endl;
             this->world->editLink(std::get<0>(prefAction), std::min(new_weight, std::get<2>(prefAction).weight), false);
         }else{
-            std::cout << "Ask to respond to action of " << from << " but he is not found" << std::endl;
+            std::cout << "\nAsk to respond to action of " << from << " but he is not found" << std::endl;
         }
     }
     return false;

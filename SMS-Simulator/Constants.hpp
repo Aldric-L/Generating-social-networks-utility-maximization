@@ -12,6 +12,8 @@
 #include <utility>
 #include <random>
 #include <cassert>
+#include <ctime>
+#include <chrono>
 
 #define GRAPH_SIZE 12
 #define P_DIMENSION 100

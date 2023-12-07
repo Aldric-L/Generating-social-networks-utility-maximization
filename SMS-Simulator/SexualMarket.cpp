@@ -47,9 +47,11 @@ SexualMarket::~SexualMarket(){
         verticesTrackersManager.addSave(save);
     }
     if (SexualMarket::SHOULD_I_LOG){
-        SexualMarket::edgeTrackersManager.saveToCSV("SMS-Save-Edges.csv", false);
-        SexualMarket::utilityTrackersManager.saveToCSV("SMS-Save-Utility.csv", false);
-        SexualMarket::verticesTrackersManager.saveToCSV("SMS-Save-Vertices.csv", false);
+        long int t = static_cast<long int> (time(NULL));
+        std::string curt = std::to_string(t);
+        SexualMarket::edgeTrackersManager.saveToCSV("SMS-Save-Edges " + curt + ".csv", false);
+        SexualMarket::utilityTrackersManager.saveToCSV("SMS-Save-Utility " + curt + ".csv", false);
+        SexualMarket::verticesTrackersManager.saveToCSV("SMS-Save-Vertices"  + curt + ".csv", false);
     }
     for (int indiv(0); indiv<GRAPH_SIZE; indiv++){
         delete individuals[indiv];

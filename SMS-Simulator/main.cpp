@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <filesystem>
+#include <thread>
 #include "Constants.hpp"
 #include "Individual.hpp"
 #include "SexualMarket.hpp"
@@ -16,9 +17,6 @@ bool is_number(const std::string& s) { return !s.empty() && std::find_if(s.begin
 int main(int argc, const char * argv[]) {
     std::cout << "Hello, terrible World!\n";
     
-    SexualMarket sm;
-    sm.initializeLinks();
-
     std::cout << "Welcome in the SMS-Simulator \n";
     std::string roundsinput = "";
     
@@ -37,44 +35,51 @@ int main(int argc, const char * argv[]) {
     }else {
         SexualMarket::SHOULD_I_LOG = false;
     }
-        
-    std::cout << "\n A look to the initialization adjacency matrix : \n";
-    akml::cout_matrix(sm.asAdjacencyMatrix());
     int rounds = std::stoi(roundsinput);
-    unsigned short int inactive_consecutive_rounds_counter(0);
-    for (int i(0); i < rounds; i++){
-        if (inactive_consecutive_rounds_counter == 3){
-            std::cout << "\n\n\n Inactivity detected - Stopping generation at round " << i;
-            break;
-        }
-        
-        unsigned int in(0);
-        if ((in = sm.processARound()) == GRAPH_SIZE)
-            inactive_consecutive_rounds_counter++;
-        else
-            inactive_consecutive_rounds_counter=0;
-        //std::cout << "\n\n\n Inactivity = " << in;
+    
+    roundsinput = "";
+    while (!is_number(roundsinput)){
+        std::cout << "\nHow many simulations should be conducted in parallel ? ";
+        std::cin >> roundsinput;
     }
-    std::cout << "\n A look to the final adjacency matrix : \n";
-    akml::cout_matrix(sm.asAdjacencyMatrix());
+    
+    int threads_nb = std::stoi(roundsinput);
+    if (threads_nb > 1)
+        std::cout.setstate(std::ios_base::failbit);
+    
+    std::vector<SexualMarket> worlds;
+    std::vector<std::thread> threads;
+    auto processGame = [](int rounds) {
+        SexualMarket sm;
+        sm.initializeLinks();
+        std::cout << "\n A look to the initialization adjacency matrix : \n";
+        akml::cout_matrix(sm.asAdjacencyMatrix());
+        unsigned short int inactive_consecutive_rounds_counter(0);
+        for (int i(0); i < rounds; i++){
+                if (inactive_consecutive_rounds_counter == 3){
+                    std::cout << "\n\n\n Inactivity detected - Stopping generation at round " << i;
+                    break;
+                }
+                
+                if ((sm.processARound()) == GRAPH_SIZE)
+                    inactive_consecutive_rounds_counter++;
+                else
+                    inactive_consecutive_rounds_counter=0;
+        }
+        std::cout << "\n A look to the final adjacency matrix : \n";
+        akml::cout_matrix(sm.asAdjacencyMatrix());
+    };
+    for (int th(0); th < threads_nb; th++){
+        std::thread thread(std::ref(processGame), rounds);
+        threads.push_back(std::move(thread));
+    }
+    for (int th(0); th < threads_nb; th++){
+        if (threads[th].joinable())
+            threads[th].join();
+    }
+    if (threads_nb > 1)
+        std::cout.clear();
+    
     
     return 0;
 }
-
-//Individual* node8 = sm.getIndividuals()[7];
-//std::array<SexualMarket::Link*, GRAPH_SIZE-1> test = sm.getIndividualRelations(node8);
-//std::vector<SexualMarket::Link> testScope = node8->getScope();
-//std::array<SexualMarket::Link*, GRAPH_SIZE-1> testScope0 = sm.getIndividuals()[0]->getRelations();
-//std::vector<SexualMarket::Link> scope8 = node8->getScope();
-//node8->computeUtility();
-
-/*for (int i(0); i < 10; i++){
-    
-    Individual* node8 = sm.getIndividuals()[7];
-    Individual* nodei = sm.getIndividuals()[i];
-    std::cout << "\n --Individual " << nodei << std::endl;
-    
-    std::vector<SexualMarket::Link> scopei = nodei->getScope();
-    nodei->takeAction();
-}
-*/
