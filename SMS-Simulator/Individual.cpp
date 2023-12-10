@@ -22,15 +22,15 @@ Individual::Individual(SexualMarket& world, unsigned long int agentid){
     //while((g = norm(gen)) > 0.9 || g < 0.1){ g = norm(gen); }
     std::normal_distribution<float> norm(1,0.35);
     while((g = norm(gen)) > 1.8 || g < 0.1 || g==1){ g = norm(gen); }
-    Individual::gamma = g+10;
+    Individual::gamma = g+9;
     Individual::delta = 2;
 }
 
-akml::Matrix<float, P_DIMENSION, 1> Individual::getP(){
+akml::Matrix<float, P_DIMENSION, 1>& Individual::getP() {
 	return Individual::P;
 }
 
-std::array<SexualMarket::Link*, GRAPH_SIZE-1> Individual::getRelations(){
+akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> Individual::getRelations(){
     return this->world->getIndividualRelations(this);
 }
 
@@ -38,7 +38,7 @@ std::vector<SexualMarket::Link> Individual::getScope() {
     return this->world->getIndividualScope(this);
 }
 
-Individual::PSAndAlphaTuple Individual::buildPSAndAlpha(const std::array<SexualMarket::Link*, GRAPH_SIZE-1>& relations){
+Individual::PSAndAlphaTuple Individual::buildPSAndAlpha(const akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1>& relations){
     std::array<akml::Matrix<float, P_DIMENSION, 1>, GRAPH_SIZE-1> P_S_temp;
     // Weights matrix
     akml::Matrix<float, GRAPH_SIZE-1, 1> alpha;
@@ -47,38 +47,40 @@ Individual::PSAndAlphaTuple Individual::buildPSAndAlpha(const std::array<SexualM
     // Pointers to relation matrix
     akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> eta;
 
+    akml::Matrix<float, P_DIMENSION, 1> empty_p;
     // In order to try to avoid using dynamic matrices, we will keep fixed sized matrices with 0 where we should not have a column
     for (std::size_t i(0); i < GRAPH_SIZE-1; i++){
-        if (relations[i]->weight > 0){
-            if (relations[i]->first == this){
-                P_S_temp[i] = relations[i]->second->getP();
-                beta(i+1, 1) = relations[i]->second;
+        if (relations[{i,0}]->weight > 0){
+            if (relations[{i,0}]->first == this){
+                P_S_temp[i] = relations[{i,0}]->second->getP();
+                beta(i+1, 1) = relations[{i,0}]->second;
             }else {
-                P_S_temp[i] = relations[i]->first->getP();
-                beta(i+1, 1) = relations[i]->first;
+                P_S_temp[i] = relations[{i,0}]->first->getP();
+                beta(i+1, 1) = relations[{i,0}]->first;
             }
-            eta(i+1, 1) = relations[i];
+            eta(i+1, 1) = relations[{i,0}];
         }else{
-            P_S_temp[i] = akml::Matrix<float, P_DIMENSION, 1>::EMPTY;
+            P_S_temp[i] = empty_p;
             beta(i+1, 1) = nullptr;
             eta(i+1, 1) = nullptr;
         }
-        alpha(i+1, 1) = relations[i]->weight;
+        alpha(i+1, 1) = relations[{i,0}]->weight;
     }
     
     akml::Matrix<float, P_DIMENSION, GRAPH_SIZE-1> P_S (P_S_temp);
     return std::make_tuple(P_S, alpha, beta, eta);
 }
 
-float Individual::computeUtility(std::array<SexualMarket::Link*, GRAPH_SIZE-1>* relations) {
+float Individual::computeUtility(akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1>* relations) {
     bool rel_td = false;
     if (relations == nullptr){
-        relations = new std::array<SexualMarket::Link*, GRAPH_SIZE-1>;
+        relations = new akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1>;
         *relations = this->getRelations();
         rel_td = true;
     }
     std::size_t effectiveRelationCount = 0;
-    std::array<akml::Matrix<float, P_DIMENSION, 1>, GRAPH_SIZE-1> P_S_temp;
+    std::array<akml::Matrix<float, P_DIMENSION, 1>, GRAPH_SIZE-1>* P_S_temp;
+    P_S_temp = new std::array<akml::Matrix<float, P_DIMENSION, 1>, GRAPH_SIZE-1>;
     akml::Matrix<float, GRAPH_SIZE-1, 1> alpha;
     float RHS = 0;
     
@@ -88,24 +90,24 @@ float Individual::computeUtility(std::array<SexualMarket::Link*, GRAPH_SIZE-1>* 
     
     // In order to try to avoid using dynamic matrices, we will keep fixed sized matrices with 0 where we should not have a column
     for (std::size_t i(0); i < GRAPH_SIZE-1; i++){
-        if ((*relations)[i]->weight > 0){
+        if ((*relations)[{i,0}]->weight > 0){
             effectiveRelationCount++;
-            if ((*relations)[i]->first == this){
-                P_S_temp[i] = (*relations)[i]->second->getP();
+            if ((*relations)[{i,0}]->first == this){
+                (*P_S_temp)[i] = (*relations)[{i,0}]->second->getP();
             }else {
-                P_S_temp[i] = (*relations)[i]->first->getP();
+                (*P_S_temp)[i] = (*relations)[{i,0}]->first->getP();
             }
             //RHS += std::pow((*relations)[i]->weight, Individual::gamma);
-            RHS1 += (std::pow( (*relations)[i]->weight, Individual::gamma )) / (1-std::pow((*relations)[i]->weight, Individual::gamma));
-            RHS2 += (*relations)[i]->weight;
+            RHS1 += (std::pow( (*relations)[{i,0}]->weight, Individual::gamma )) / (1-std::pow((*relations)[{i,0}]->weight, Individual::gamma));
+            RHS2 += (*relations)[{i,0}]->weight;
         }
-        alpha(i+1, 1) = (*relations)[i]->weight;
+        alpha(i+1, 1) = (*relations)[{i,0}]->weight;
         
     }
     //RHS = std::pow(RHS, 1/(Individual::gamma))/(GRAPH_SIZE);
     RHS2 = std::pow(RHS2, Individual::gamma);
     
-    akml::Matrix<float, P_DIMENSION, GRAPH_SIZE-1> P_S (P_S_temp);
+    akml::Matrix<float, P_DIMENSION, GRAPH_SIZE-1> P_S (*P_S_temp);
     akml::Matrix<float, GRAPH_SIZE-1, P_DIMENSION> P_S_transpose = akml::transpose(P_S);
     akml::Matrix<float, GRAPH_SIZE-1, 1> P_prod = akml::matrix_product(P_S_transpose, Individual::P);
     
@@ -117,18 +119,19 @@ float Individual::computeUtility(std::array<SexualMarket::Link*, GRAPH_SIZE-1>* 
     
     if (rel_td)
         delete relations;
+    delete P_S_temp;
     
     return LHS-(RHS1+RHS2);
 }
 
-akml::Matrix<float, GRAPH_SIZE-1, 1> Individual::computeUtilityGrad(std::array<SexualMarket::Link*, GRAPH_SIZE-1>* relations, Individual::PSAndAlphaTuple* PS_Alpha) {
+akml::Matrix<float, GRAPH_SIZE-1, 1> Individual::computeUtilityGrad(akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1>* relations, Individual::PSAndAlphaTuple* PS_Alpha) {
     // The following lines are implemented to avoid memory leaks : pointers allow us to use this function without providing
     // any argument. In fact, it has been done that way to allow us to not recalculate variables that have been already used
     // in a previous calculation. By pointers, we can take back our calculations where we were.
     bool rel_td = false;
     bool ps_td = false;
     if (relations == nullptr){
-        relations = new std::array<SexualMarket::Link*, GRAPH_SIZE-1>;
+        relations = new akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1>;
         *relations = this->getRelations();
         rel_td = true;
     }
@@ -166,8 +169,8 @@ akml::Matrix<float, GRAPH_SIZE-1, 1> Individual::computeUtilityGrad(std::array<S
 }
 
 std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individual::preprocessTakeAction(Individual* target){
-    std::array<SexualMarket::Link*, GRAPH_SIZE-1> relations = this->getRelations();
-    std::array<SexualMarket::Link*, GRAPH_SIZE-1> rel_temp;
+    akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> relations = this->getRelations();
+    akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> rel_temp;
     std::vector<SexualMarket::Link> scope = this->getScope();
     
     // Because we want to distinguish individuals that are in the scope but with whom there is no link and those  no link
@@ -175,27 +178,27 @@ std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individua
     // Pointers to relation matrix
     akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> true_eta;
     for (std::size_t rel(0); rel < GRAPH_SIZE-1; rel++){
-        rel_temp[rel] = new SexualMarket::Link;
-        *rel_temp[rel] = *relations[rel];
-        if (relations[rel]->weight == 0){
+        rel_temp[{rel, 0}] = new SexualMarket::Link;
+        *rel_temp[{rel, 0}] = *relations[{rel, 0}];
+        if (relations[{rel, 0}]->weight == 0){
             for (std::size_t i(0); i < scope.size(); i++){
-                if ((scope[i].first == this && relations[rel]->first == this && scope[i].second == relations[rel]->second)
-                    || (scope[i].first == this && relations[rel]->second == this && scope[i].second == relations[rel]->first)
-                    || (scope[i].second == this && relations[rel]->second == this && scope[i].first == relations[rel]->first)
-                    || (scope[i].second == this && relations[rel]->first == this && scope[i].first == relations[rel]->second)){
-                    rel_temp[rel]->weight = 0.00001;
+                if ((scope[i].first == this && relations[{rel, 0}]->first == this && scope[i].second == relations[{rel, 0}]->second)
+                    || (scope[i].first == this && relations[{rel, 0}]->second == this && scope[i].second == relations[{rel, 0}]->first)
+                    || (scope[i].second == this && relations[{rel, 0}]->second == this && scope[i].first == relations[{rel, 0}]->first)
+                    || (scope[i].second == this && relations[{rel, 0}]->first == this && scope[i].first == relations[{rel, 0}]->second)){
+                    rel_temp[{rel, 0}]->weight = 0.00001;
                     break;
                 }
             }
         }
-        true_eta(rel+1, 1) = relations[rel];
+        true_eta(rel+1, 1) = relations[{rel, 0}];
     }
 
     Individual::PSAndAlphaTuple PS_Alpha = this->buildPSAndAlpha(rel_temp);
     
     //We delete temp pointers
     for (std::size_t rel(0); rel < GRAPH_SIZE-1; rel++){
-        delete rel_temp[rel];
+        delete rel_temp[{rel, 0}];
     }
     
     std::cout << "Computing grad" << std::endl;
@@ -277,3 +280,4 @@ bool Individual::responseToAction(Individual* from, float new_weight){
     }
     return false;
 }
+

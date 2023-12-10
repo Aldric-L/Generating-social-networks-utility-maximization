@@ -84,6 +84,5 @@ int main(int argc, const char * argv[]) {
     if (threads_nb > 1)
         std::cout.clear();
     
-    
     return 0;
 }

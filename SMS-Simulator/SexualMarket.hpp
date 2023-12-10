@@ -27,8 +27,11 @@ class SexualMarket {
         };
         
     protected:
+        // We replace std::array<Link, LINKS_NB> links; by std::vector in order to register the Links in the heap and not in the stack
+        // This is, in fact, very sad. I love static things. I grief the static array (no way to use my static Matrices with objects).
+        std::vector<Link> links;
         std::size_t currentRound = 0;
-        std::array<Individual*, GRAPH_SIZE> individuals;
+        akml::Matrix<Individual*, GRAPH_SIZE, 1> individuals;
         typedef akml::Save<6, std::size_t, unsigned long int, unsigned long int, float, float, bool> EdgeSaveTrackerType;
         typedef akml::Save<3, std::size_t, unsigned long int, float> UtilitySaveTrackerType;
         typedef akml::Save<4, std::size_t, unsigned long int, float, std::string> VerticesSaveTrackerType;
@@ -38,14 +41,14 @@ class SexualMarket {
 
     public:
         static inline bool SHOULD_I_LOG = true;
-        std::array<Link, LINKS_NB> links;
         SexualMarket();
         ~SexualMarket();    
     
         // WIP - for now initialization is hardcoded
         void initializeLinks();
-        std::array<Link*, GRAPH_SIZE-1> getIndividualRelations(Individual* indiv);
-        std::array<Individual*, GRAPH_SIZE> getIndividuals();
+        akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> getIndividualRelations(Individual* indiv);
+        akml::Matrix<Individual*, GRAPH_SIZE, 1> getIndividuals();
+        Individual* getIndividual(const std::size_t indiv_id);
         std::vector<SexualMarket::Link> getIndividualScope(Individual* indiv);
         void editLink(Individual* indiv1, Individual* indiv2, float newWeight, bool accepted=true);
         void editLink(SexualMarket::Link* link, float newWeight, bool accepted=true);

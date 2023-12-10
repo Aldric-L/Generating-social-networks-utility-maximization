@@ -8,18 +8,19 @@
 #include "Individual.hpp"
 
 SexualMarket::SexualMarket(){
+    links.reserve(LINKS_NB);
     SexualMarket::EdgeSaveTrackerType::default_parameters_name = {{ "round", "vertex1", "vertex2", "old_weight", "new_weight", "accepted" }};
     SexualMarket::UtilitySaveTrackerType::default_parameters_name = {{ "round", "agentid", "utility" }};
     SexualMarket::VerticesSaveTrackerType::default_parameters_name = {{ "round", "agentid", "gamma", "P" }};
     
     SexualMarket::VerticesSaveTrackerType* save;
     for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
-        individuals[indiv] = new Individual(*this, indiv);
+        individuals[{indiv,0}] = new Individual(*this, indiv);
         std::string p = "";
         for (int i(0); i < P_DIMENSION; i++){
-            p.push_back( char( individuals[indiv]->getP()(i+1, 1) + 48) );
+            p.push_back( char( individuals[{indiv,0}]->getP()(i+1, 1) + 48) );
         }
-        save = new SexualMarket::VerticesSaveTrackerType(SexualMarket::currentRound, individuals[indiv]->agentid, individuals[indiv]->gamma, p);
+        save = new SexualMarket::VerticesSaveTrackerType(SexualMarket::currentRound, individuals[{indiv,0}]->agentid, individuals[{indiv,0}]->gamma, p);
         verticesTrackersManager.addSave(save);
     }
     
@@ -27,8 +28,8 @@ SexualMarket::SexualMarket(){
     for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
         for (std::size_t indiv_t(0); indiv_t<indiv; indiv_t++){
             Link l;
-            l.first = individuals[indiv];
-            l.second = individuals[indiv_t];
+            l.first = individuals[{indiv,0}];
+            l.second = individuals[{indiv_t,0}];
             l.weight = 0.f;
             SexualMarket::links[link_i] = l;
             link_i++;
@@ -41,9 +42,9 @@ SexualMarket::~SexualMarket(){
     for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
         std::string p = "";
         for (std::size_t i(0); i < P_DIMENSION; i++){
-            p.push_back( char( individuals[indiv]->getP()(i+1, 1) + 48) );
+            p.push_back( char( individuals[{indiv,0}]->getP()(i+1, 1) + 48) );
         }
-        save = new SexualMarket::VerticesSaveTrackerType(SexualMarket::currentRound, individuals[indiv]->agentid, individuals[indiv]->gamma, p);
+        save = new SexualMarket::VerticesSaveTrackerType(SexualMarket::currentRound, individuals[{indiv,0}]->agentid, individuals[{indiv,0}]->gamma, p);
         verticesTrackersManager.addSave(save);
     }
     if (SexualMarket::SHOULD_I_LOG){
@@ -54,7 +55,7 @@ SexualMarket::~SexualMarket(){
         SexualMarket::verticesTrackersManager.saveToCSV("SMS-Save-Vertices-"  + curt + ".csv", false);
     }
     for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
-        delete individuals[indiv];
+        delete individuals[{indiv,0}];
     }
 }
 
@@ -69,10 +70,6 @@ void SexualMarket::initializeLinks(){
     
     for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
         for (std::size_t indiv_t(0); indiv_t<indiv; indiv_t++){
-            /*if (indiv == indiv_t+1)
-                SexualMarket::links[link_i].weight = 0.1;
-            else if (indiv == indiv_t+7)
-                SexualMarket::links[link_i].weight = 0.5;*/
             unsigned short int temp = distribution(gen);
             if (temp <= 4){
                 SexualMarket::links[link_i].weight = temp * 0.1;
@@ -86,12 +83,12 @@ void SexualMarket::initializeLinks(){
     SexualMarket::currentRound = 1;
 }
 
-std::array<SexualMarket::Link*, GRAPH_SIZE-1> SexualMarket::getIndividualRelations(Individual* indiv) {
-    std::array<Link*, GRAPH_SIZE-1> linksForIndividual;
+akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> SexualMarket::getIndividualRelations(Individual* indiv) {
+    akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> linksForIndividual;
     unsigned short int incr = 0;
     for (std::size_t i(0); i < LINKS_NB; i++){
         if (SexualMarket::links[i].first == indiv || SexualMarket::links[i].second == indiv){
-            linksForIndividual[incr] = &links[i];
+            linksForIndividual[{incr,0}] = &links[i];
             incr++;
         }
     }
@@ -100,36 +97,40 @@ std::array<SexualMarket::Link*, GRAPH_SIZE-1> SexualMarket::getIndividualRelatio
     return linksForIndividual;
 }
 
-std::array<Individual*, GRAPH_SIZE> SexualMarket::getIndividuals() {
+akml::Matrix<Individual*, GRAPH_SIZE, 1> SexualMarket::getIndividuals() {
     return SexualMarket::individuals;
+}
+
+Individual* SexualMarket::getIndividual(const std::size_t indiv_id) {
+    return SexualMarket::individuals[{indiv_id,0}];
 }
 
 std::vector<SexualMarket::Link> SexualMarket::getIndividualScope(Individual* indiv) {
     std::vector<SexualMarket::Link> scope;
-    std::array<Link*, GRAPH_SIZE-1> linksofIndividual = SexualMarket::getIndividualRelations(indiv);
+    akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> linksofIndividual = SexualMarket::getIndividualRelations(indiv);
     for (std::size_t level0(0); level0 < GRAPH_SIZE-1; level0++){
-        if (linksofIndividual[level0]->weight > 0){
+        if (linksofIndividual[{level0, 0}]->weight > 0){
             Individual* target0 = nullptr;
             Individual* target1 = nullptr;
             
-            if (linksofIndividual[level0]->first == indiv)
-                target0 = linksofIndividual[level0]->second;
+            if (linksofIndividual[{level0, 0}]->first == indiv)
+                target0 = linksofIndividual[{level0, 0}]->second;
             else
-                target0 = linksofIndividual[level0]->first;
+                target0 = linksofIndividual[{level0, 0}]->first;
             
-            std::array<Link*, GRAPH_SIZE-1> linksofTarget = SexualMarket::getIndividualRelations(target0);
+            akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> linksofTarget = SexualMarket::getIndividualRelations(target0);
             for (std::size_t level1(0); level1 < GRAPH_SIZE-1; level1++){
-                if (linksofTarget[level1]->weight > 0){
-                    if (linksofTarget[level1]->first == target0)
-                        target1 = linksofTarget[level1]->second;
+                if (linksofTarget[{level1, 0}]->weight > 0){
+                    if (linksofTarget[{level1, 0}]->first == target0)
+                        target1 = linksofTarget[{level1, 0}]->second;
                     else
-                        target1 = linksofTarget[level1]->first;
+                        target1 = linksofTarget[{level1, 0}]->first;
                     
                     if (target0 != target1 && target1 != indiv && target0 != indiv){
                         Link l;
                         l.first = indiv;
                         l.second = target1;
-                        l.weight = linksofTarget[level1]->weight * linksofIndividual[level0]->weight;
+                        l.weight = linksofTarget[{level1, 0}]->weight * linksofIndividual[{level0, 0}]->weight;
                         bool redundant = false;
                         for (int icheck(0); icheck < scope.size(); icheck++){
                             if ((scope[icheck].first == l.first && scope[icheck].second == l.second)
@@ -141,7 +142,7 @@ std::vector<SexualMarket::Link> SexualMarket::getIndividualScope(Individual* ind
                     }
                 }
             }
-            scope.push_back(*linksofIndividual[level0]);
+            scope.push_back(*linksofIndividual[{level0, 0}]);
             
         }
     }
@@ -177,12 +178,12 @@ unsigned int SexualMarket::processARound() {
     std::cout << "\n\n ---- ROUND " << SexualMarket::currentRound;
     unsigned int inactions(0);
     for (std::size_t i(0); i < GRAPH_SIZE; i++){
-        Individual* nodei = SexualMarket::getIndividuals()[i];
+        Individual* nodei = SexualMarket::getIndividual(i);
         std::cout << "\n --Individual " << nodei << std::endl;
         inactions += nodei->takeAction() ? 0 : 1;
     }
     for (std::size_t i(0); i < GRAPH_SIZE; i++){
-        Individual* nodei = SexualMarket::getIndividuals()[i];
+        Individual* nodei = SexualMarket::getIndividual(i);
         SexualMarket::UtilitySaveTrackerType save (SexualMarket::currentRound, nodei->agentid, nodei->computeUtility(nullptr));
         SexualMarket::utilityTrackersManager.addSave(save);
     }
@@ -198,3 +199,4 @@ akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> SexualMarket::asAdjacencyMatrix(){
     }
     return output;
 }
+

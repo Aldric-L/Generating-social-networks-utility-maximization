@@ -6,6 +6,7 @@ out
 bin
 Debug
 Release
+build-debug
 CMakeFiles
 CMakeScripts
 customlaunchscript.sh

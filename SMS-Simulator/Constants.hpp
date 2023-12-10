@@ -14,8 +14,9 @@
 #include <cassert>
 #include <ctime>
 #include <chrono>
+#include <memory>
 
-#define GRAPH_SIZE 610
+#define GRAPH_SIZE 3000
 #define P_DIMENSION 100
 
 #define LINKS_NB (GRAPH_SIZE*GRAPH_SIZE-GRAPH_SIZE)/2
