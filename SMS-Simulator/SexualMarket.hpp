@@ -34,7 +34,7 @@ class SexualMarket {
         akml::Matrix<Individual*, GRAPH_SIZE, 1> individuals;
         typedef akml::Save<6, std::size_t, unsigned long int, unsigned long int, float, float, bool> EdgeSaveTrackerType;
         typedef akml::Save<3, std::size_t, unsigned long int, float> UtilitySaveTrackerType;
-        typedef akml::Save<4, std::size_t, unsigned long int, float, std::string> VerticesSaveTrackerType;
+        typedef akml::Save<5, std::size_t, unsigned long int, float, bool, std::string> VerticesSaveTrackerType;
         akml::CSV_Saver<EdgeSaveTrackerType> edgeTrackersManager;
         akml::CSV_Saver<UtilitySaveTrackerType> utilityTrackersManager;
         akml::CSV_Saver<VerticesSaveTrackerType> verticesTrackersManager;

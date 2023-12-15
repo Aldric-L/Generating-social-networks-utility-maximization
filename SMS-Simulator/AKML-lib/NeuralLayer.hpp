@@ -29,21 +29,21 @@ public:
     
     inline void setFirstRow(const bool first_row){ isFirstRow = first_row; }
     
-    inline virtual void setInput(MatrixPrototype<float>* arg) { return; };
-    inline virtual void setBiases(MatrixPrototype<float>* new_biases) { return; };
-    inline virtual void setWeights(MatrixPrototype<float>* new_weights) { return; };
-    inline virtual void setPreviousActivationLayer(MatrixPrototype<float>* argument) { return; };
-    inline virtual MatrixPrototype<float>* getActivationLayer() { MatrixPrototype<float>* rtrn = new MatrixPrototype<float>(1, 1); return rtrn; };
+    inline virtual void setInput(MatrixInterface<float>* arg) { return; };
+    inline virtual void setBiases(MatrixInterface<float>* new_biases) { return; };
+    inline virtual void setWeights(MatrixInterface<float>* new_weights) { return; };
+    inline virtual void setPreviousActivationLayer(MatrixInterface<float>* argument) { return; };
+    inline virtual MatrixInterface<float>* getActivationLayer() { MatrixInterface<float>* rtrn = new DynamicMatrix<float>(1, 1); return rtrn; };
 };
 
 
 template <std::size_t NEURON_NUMBER, std::size_t PREVIOUS_NEURON_NUMBER>
 class NeuralLayer : public AbstractNeuralLayer {
 private:
-    Matrix<float, NEURON_NUMBER, 1> ownActivationLayer;
-    Matrix<float, PREVIOUS_NEURON_NUMBER, 1>* previousActivationLayer;
-    Matrix<float, NEURON_NUMBER, PREVIOUS_NEURON_NUMBER> weights;
-    Matrix<float, NEURON_NUMBER, 1> biases;
+    StaticMatrix<float, NEURON_NUMBER, 1> ownActivationLayer;
+    StaticMatrix<float, PREVIOUS_NEURON_NUMBER, 1>* previousActivationLayer;
+    StaticMatrix<float, NEURON_NUMBER, PREVIOUS_NEURON_NUMBER> weights;
+    StaticMatrix<float, NEURON_NUMBER, 1> biases;
     
 public:
     
@@ -57,52 +57,52 @@ public:
             delete previousActivationLayer;
     };
     
-    inline void setInput(MatrixPrototype<float>* arg) {
+    inline void setInput(MatrixInterface<float>* arg) {
         if (!isFirstRow)
             throw std::exception();
         
-        ownActivationLayer = *((Matrix<float, NEURON_NUMBER, 1>*)arg);
+        ownActivationLayer = *((StaticMatrix<float, NEURON_NUMBER, 1>*)arg);
         if (previousActivationLayer == nullptr)
             delete previousActivationLayer;
         // This is oddly a memory leak... but thanksfully it is not necessary to define previous activation Layer for the first layer
         // It was only more "humanly-coherent"
-        //previousActivationLayer = new Matrix<float, PREVIOUS_NEURON_NUMBER, 1>;
+        //previousActivationLayer = new StaticMatrix<float, PREVIOUS_NEURON_NUMBER, 1>;
         //previousActivationLayer->operator()(1,1) = 1;
     }
     
-    inline void setBiases(MatrixPrototype<float>* arg) {
-        biases = *((Matrix<float, NEURON_NUMBER, 1>*)arg);
+    inline void setBiases(MatrixInterface<float>* arg) {
+        biases = *((StaticMatrix<float, NEURON_NUMBER, 1>*)arg);
     }
     
-    inline Matrix<float, NEURON_NUMBER, 1>* getBiasesAccess(){
-        Matrix<float, NEURON_NUMBER, 1>* b_point (&biases);
+    inline StaticMatrix<float, NEURON_NUMBER, 1>* getBiasesAccess(){
+        StaticMatrix<float, NEURON_NUMBER, 1>* b_point (&biases);
         return b_point;
     }
     
-    inline void setWeights(MatrixPrototype<float>* arg) {
-        Matrix<float, NEURON_NUMBER, PREVIOUS_NEURON_NUMBER>* new_weights(0);
-        new_weights = (Matrix<float, NEURON_NUMBER, PREVIOUS_NEURON_NUMBER>*)arg;
+    inline void setWeights(MatrixInterface<float>* arg) {
+        StaticMatrix<float, NEURON_NUMBER, PREVIOUS_NEURON_NUMBER>* new_weights(0);
+        new_weights = (StaticMatrix<float, NEURON_NUMBER, PREVIOUS_NEURON_NUMBER>*)arg;
         weights = *new_weights;
     }
     
-    inline Matrix<float, NEURON_NUMBER, PREVIOUS_NEURON_NUMBER>* getWeightsAccess (){
-        Matrix<float, NEURON_NUMBER, PREVIOUS_NEURON_NUMBER>* w_point (&weights);
+    inline StaticMatrix<float, NEURON_NUMBER, PREVIOUS_NEURON_NUMBER>* getWeightsAccess (){
+        StaticMatrix<float, NEURON_NUMBER, PREVIOUS_NEURON_NUMBER>* w_point (&weights);
         return w_point;
     }
     
-    inline Matrix<float, PREVIOUS_NEURON_NUMBER, 1>* getPreviousActivationLayer (){
+    inline StaticMatrix<float, PREVIOUS_NEURON_NUMBER, 1>* getPreviousActivationLayer (){
         return previousActivationLayer;
     }
     
-    inline void setPreviousActivationLayer(MatrixPrototype<float>* arg) {
-        Matrix<float, PREVIOUS_NEURON_NUMBER, 1>* prev(0);
-        prev = (Matrix<float, PREVIOUS_NEURON_NUMBER, 1>*)arg;
+    inline void setPreviousActivationLayer(MatrixInterface<float>* arg) {
+        StaticMatrix<float, PREVIOUS_NEURON_NUMBER, 1>* prev(0);
+        prev = (StaticMatrix<float, PREVIOUS_NEURON_NUMBER, 1>*)arg;
         previousActivationLayer = prev;
     }
     
-    inline MatrixPrototype<float>* getActivationLayer(){
+    inline MatrixInterface<float>* getActivationLayer(){
         if (!isFirstRow){
-            ownActivationLayer = Matrix<float, NEURON_NUMBER, 1>::product(weights, *previousActivationLayer);
+            ownActivationLayer = StaticMatrix<float, NEURON_NUMBER, 1>::product(weights, *previousActivationLayer);
             ownActivationLayer += biases;
             ownActivationLayer.transform(activationFunction);
         }

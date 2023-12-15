@@ -11,7 +11,7 @@ SexualMarket::SexualMarket(){
     links.reserve(LINKS_NB);
     SexualMarket::EdgeSaveTrackerType::default_parameters_name = {{ "round", "vertex1", "vertex2", "old_weight", "new_weight", "accepted" }};
     SexualMarket::UtilitySaveTrackerType::default_parameters_name = {{ "round", "agentid", "utility" }};
-    SexualMarket::VerticesSaveTrackerType::default_parameters_name = {{ "round", "agentid", "gamma", "P" }};
+    SexualMarket::VerticesSaveTrackerType::default_parameters_name = {{ "round", "agentid", "gamma", "isgreedy" , "P" }};
     
     SexualMarket::VerticesSaveTrackerType* save;
     for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
@@ -20,7 +20,7 @@ SexualMarket::SexualMarket(){
         for (int i(0); i < P_DIMENSION; i++){
             p.push_back( char( individuals[{indiv,0}]->getP()(i+1, 1) + 48) );
         }
-        save = new SexualMarket::VerticesSaveTrackerType(SexualMarket::currentRound, individuals[{indiv,0}]->agentid, individuals[{indiv,0}]->gamma, p);
+        save = new SexualMarket::VerticesSaveTrackerType(SexualMarket::currentRound, individuals[{indiv,0}]->agentid, individuals[{indiv,0}]->gamma, individuals[{indiv,0}]->is_greedy, p);
         verticesTrackersManager.addSave(save);
     }
     
@@ -44,7 +44,7 @@ SexualMarket::~SexualMarket(){
         for (std::size_t i(0); i < P_DIMENSION; i++){
             p.push_back( char( individuals[{indiv,0}]->getP()(i+1, 1) + 48) );
         }
-        save = new SexualMarket::VerticesSaveTrackerType(SexualMarket::currentRound, individuals[{indiv,0}]->agentid, individuals[{indiv,0}]->gamma, p);
+        save = new SexualMarket::VerticesSaveTrackerType(SexualMarket::currentRound, individuals[{indiv,0}]->agentid, individuals[{indiv,0}]->gamma, individuals[{indiv,0}]->is_greedy, p);
         verticesTrackersManager.addSave(save);
     }
     if (SexualMarket::SHOULD_I_LOG){
@@ -179,14 +179,21 @@ unsigned int SexualMarket::processARound() {
     unsigned int inactions(0);
     for (std::size_t i(0); i < GRAPH_SIZE; i++){
         Individual* nodei = SexualMarket::getIndividual(i);
-        std::cout << "\n --Individual " << nodei << std::endl;
+        std::cout << "\n --Individual (" << i+1 << " / " << GRAPH_SIZE <<  ") " << nodei << std::endl;
         inactions += nodei->takeAction() ? 0 : 1;
     }
     for (std::size_t i(0); i < GRAPH_SIZE; i++){
-        Individual* nodei = SexualMarket::getIndividual(i);
-        SexualMarket::UtilitySaveTrackerType save (SexualMarket::currentRound, nodei->agentid, nodei->computeUtility(nullptr));
+        //Individual* nodei = SexualMarket::getIndividual(i);
+        //SexualMarket::UtilitySaveTrackerType save (SexualMarket::currentRound, nodei->agentid, nodei->computeUtility(nullptr));
+        SexualMarket::UtilitySaveTrackerType save (SexualMarket::currentRound, SexualMarket::getIndividual(i)->agentid, SexualMarket::getIndividual(i)->computeUtility(nullptr));
         SexualMarket::utilityTrackersManager.addSave(save);
     }
+    #if GRAPH_SIZE >= 100
+    if (SexualMarket::currentRound % 100 == 0){
+        SexualMarket::edgeTrackersManager.bufferize(false);
+        SexualMarket::utilityTrackersManager.bufferize(false);
+    }
+    #endif
     SexualMarket::currentRound++;
     return inactions;
 }

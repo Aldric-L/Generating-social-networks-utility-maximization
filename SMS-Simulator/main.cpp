@@ -44,14 +44,24 @@ int main(int argc, const char * argv[]) {
     }
     
     int threads_nb = std::stoi(roundsinput);
+    
+    roundsinput = "";
+    while (!is_number(roundsinput) || std::stoi(roundsinput) < 0 || std::stoi(roundsinput) > 100){
+        std::cout << "\nWhat is the share of greedy individuals (0-100) ? ";
+        std::cin >> roundsinput;
+    }
+    Individual::GREEDY_SHARE = static_cast<unsigned short int>(std::stoi(roundsinput));
+    
     if (threads_nb > 1)
         std::cout.setstate(std::ios_base::failbit);
     
     auto processGame = [](int rds) {
         SexualMarket sm;
         sm.initializeLinks();
-        std::cout << "\n A look to the initialization adjacency matrix : \n";
-        akml::cout_matrix(sm.asAdjacencyMatrix());
+        #if GRAPH_SIZE < 20
+            std::cout << "\n A look to the initialization adjacency matrix : \n";
+            akml::cout_matrix(sm.asAdjacencyMatrix());
+        #endif
         unsigned short int inactive_consecutive_rounds_counter(0);
         for (int i(0); i < rds; i++){
                 if (inactive_consecutive_rounds_counter == 3){
@@ -64,8 +74,10 @@ int main(int argc, const char * argv[]) {
                 else
                     inactive_consecutive_rounds_counter=0;
         }
-        std::cout << "\n A look to the final adjacency matrix : \n";
-        akml::cout_matrix(sm.asAdjacencyMatrix());
+        #if GRAPH_SIZE < 20
+            std::cout << "\n A look to the final adjacency matrix : \n";
+            akml::cout_matrix(sm.asAdjacencyMatrix());
+        #endif
     };
     if (threads_nb > 1){
         std::vector<std::thread> threads;

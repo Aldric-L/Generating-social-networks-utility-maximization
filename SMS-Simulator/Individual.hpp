@@ -26,9 +26,13 @@ class Individual {
         
 
 	public:
+        static inline unsigned short int GREEDY_SHARE = 0;
+        
+        bool is_greedy;
         float gamma;
         float delta;
         unsigned long int agentid;
+    
 		Individual(SexualMarket& world, unsigned long int agentid);
         akml::Matrix<float, P_DIMENSION, 1>& getP();
         bool takeAction();

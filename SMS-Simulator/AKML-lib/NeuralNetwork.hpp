@@ -208,11 +208,11 @@ public:
         layers[layer-1] = new NeuralLayer<NEURON_NUMBER, PREVIOUS_NEURON_NUMBER>(layer-1);
         layers[layer-1]->setActivationFunction(activation_function);
         
-        Matrix<float, NEURON_NUMBER, 1> new_biases;
-        new_biases.transform(Matrix<float, NEURON_NUMBER, 1>::RANDOM_TRANSFORM);
+        StaticMatrix<float, NEURON_NUMBER, 1> new_biases;
+        new_biases.transform(StaticMatrix<float, NEURON_NUMBER, 1>::RANDOM_TRANSFORM);
         layers[layer-1]->setBiases(&new_biases);
-        Matrix<float, NEURON_NUMBER, PREVIOUS_NEURON_NUMBER> new_weights;
-        new_weights.transform(Matrix<float, NEURON_NUMBER, 1>::RANDOM_TRANSFORM);
+        StaticMatrix<float, NEURON_NUMBER, PREVIOUS_NEURON_NUMBER> new_weights;
+        new_weights.transform(StaticMatrix<float, NEURON_NUMBER, 1>::RANDOM_TRANSFORM);
         layers[layer-1]->setWeights(&new_weights);
         return (NeuralLayer<NEURON_NUMBER, PREVIOUS_NEURON_NUMBER>*)layers[layer-1];
     };
@@ -222,7 +222,7 @@ public:
     };
     
     template <std::size_t INPUTNUMBER=NEURAL_INPUT_NB, std::size_t OUTPUTNUMBER=NEURAL_OUTPUT_NB>
-    inline Matrix<float, OUTPUTNUMBER, 1>* process(Matrix<float, INPUTNUMBER, 1> &input){
+    inline StaticMatrix<float, OUTPUTNUMBER, 1>* process(StaticMatrix<float, INPUTNUMBER, 1> &input){
         layers[0]->setInput(&input);
         for (std::size_t i(1); i < NBLAYERS; i++){
             if (layers[i] == nullptr)
@@ -230,7 +230,7 @@ public:
             layers[i]->setPreviousActivationLayer(layers[i-1]->getActivationLayer());
         }
         
-        return  (Matrix<float, OUTPUTNUMBER, 1>*)layers[NBLAYERS-1]->getActivationLayer();
+        return  (StaticMatrix<float, OUTPUTNUMBER, 1>*)layers[NBLAYERS-1]->getActivationLayer();
     }
     
     static inline std::function<void(akml::NeuralNetwork<NBLAYERS>&)> DEFAULT_INIT_INSTRUCTIONS = [](NeuralNetwork<NBLAYERS>& net) {

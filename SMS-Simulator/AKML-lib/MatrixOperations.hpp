@@ -11,146 +11,168 @@
 #include "Matrix.hpp"
 
 namespace akml {
-    template <typename element_type, std::size_t ROWS, std::size_t COLUMNS>
-    inline Matrix<element_type, COLUMNS, ROWS> transpose(const Matrix<element_type, ROWS, COLUMNS>& old_matrix){
+    template <typename MATRIX_TYPE, typename element_type>
+    inline MATRIX_TYPE transform(MATRIX_TYPE matrix, std::function<element_type(element_type, std::size_t, std::size_t)> transfunc){
+        matrix.transform(transfunc);
+        return matrix;
+    }
+
+    template <typename MATRIX_TYPE, typename element_type>
+    inline MATRIX_TYPE transform(MATRIX_TYPE matrix, std::function<element_type(element_type)> transfunc){
+        matrix.transform(transfunc);
+        return matrix;
+    }
+
+    
+    template <typename element_type>
+    inline DynamicMatrix<element_type> transpose(DynamicMatrix<element_type> old_matrix){
         if (!old_matrix.isInitialized())
             throw std::invalid_argument("Matrix provided is not initialized.");
         
-        Matrix<element_type, COLUMNS, ROWS> newself;
-        for (std::size_t i=1; i <= ROWS; i++){
-            for (std::size_t j=1; j <= COLUMNS; j++){
-                newself(j,i) = old_matrix.read(j,i);
+        element_type* localdata;
+        localdata = new element_type[(old_matrix.getNRows())*(old_matrix.getNColumns())];
+        for (std::size_t i=0; i < old_matrix.getNColumns(); i++){
+            for (std::size_t j=0; j < old_matrix.getNRows(); j++){
+                *(localdata+i*(old_matrix.getNRows())+j) = old_matrix.read(j+1, i+1);
+
             }
         }
-        return newself;
-    }
-
-    template <typename MATRIX_INNER_TYPE, std::size_t DIM>
-    inline MATRIX_INNER_TYPE inner_product(const akml::Matrix<MATRIX_INNER_TYPE, DIM, 1>& a, const akml::Matrix<MATRIX_INNER_TYPE, 1, DIM>& b){
-        if (!a.isInitialized() || !b.isInitialized())
-            throw std::invalid_argument("Matrix provided is not initialized.");
-        MATRIX_INNER_TYPE total(0);
-        for (std::size_t i=0; i <= DIM; i++){
-            total += a.read(i, 1) * b.read(1, i);
-        }
-        return total;
-    }
-
-    template <typename MATRIX_INNER_TYPE, std::size_t DIM>
-    inline MATRIX_INNER_TYPE inner_product(const akml::Matrix<MATRIX_INNER_TYPE, 1, DIM>& a, const akml::Matrix<MATRIX_INNER_TYPE, DIM, 1>& b){
-        if (!a.isInitialized() || !b.isInitialized())
-            throw std::invalid_argument("Matrix provided is not initialized.");
-        return inner_product(b, a);
-    }
-
-    template <typename MATRIX_INNER_TYPE, std::size_t DIM>
-    inline MATRIX_INNER_TYPE inner_product(const akml::Matrix<MATRIX_INNER_TYPE, DIM, 1>& a, const akml::Matrix<MATRIX_INNER_TYPE, DIM, 1>& b){
-        if (!a.isInitialized() || !b.isInitialized())
-            throw std::invalid_argument("Matrix provided is not initialized.");
-        MATRIX_INNER_TYPE total(0);
-        for (std::size_t i=0; i <= DIM; i++){
-            total += a.read(i, 1) * b.read(i, 1);
-        }
-        return total;
-    }
-
-    template <typename MATRIX_INNER_TYPE, std::size_t DIM>
-    inline MATRIX_INNER_TYPE inner_product(const akml::Matrix<MATRIX_INNER_TYPE, 1, DIM>& a, const akml::Matrix<MATRIX_INNER_TYPE, 1, DIM>& b){
-        if (!a.isInitialized() || !b.isInitialized())
-            throw std::invalid_argument("Matrix provided is not initialized.");
-        MATRIX_INNER_TYPE total(0);
-        for (std::size_t i=0; i <= DIM; i++){
-            total += a.read(1, i) * b.read(1, i);
-        }
-        return total;
+        old_matrix.deleteInternStorage();
+        old_matrix.getStorage() = localdata;
+        old_matrix.getStorageEnd() = localdata+(old_matrix.getNRows())*(old_matrix.getNColumns());
+        std::size_t old_rows = old_matrix.getNRows();
+        old_matrix.setNRows(old_matrix.getNColumns());
+        old_matrix.setNColumns(old_rows);
+        return old_matrix;
     }
 
     template <typename element_type, std::size_t ROWS, std::size_t COLUMNS>
-    inline Matrix<element_type, ROWS, COLUMNS> hadamard_product(Matrix<element_type, ROWS, COLUMNS> A, Matrix<element_type, ROWS, COLUMNS> B){
+    inline Matrix<element_type, COLUMNS, ROWS> transpose(Matrix<element_type, ROWS, COLUMNS>& old_matrix){
+        if (!old_matrix.isInitialized())
+            throw std::invalid_argument("Matrix provided is not initialized.");
+        
+        Matrix<element_type, COLUMNS, ROWS> newmatrix;
+        for (std::size_t i=0; i < old_matrix.getNColumns(); i++){
+            for (std::size_t j=0; j < old_matrix.getNRows(); j++){
+                *(newmatrix.getStorage()+i*(old_matrix.getNRows())+j) = old_matrix.read(j+1, i+1);
+            }
+        }
+        return newmatrix;
+    }
+
+    template <typename MATRIX_INNER_TYPE>
+    inline MATRIX_INNER_TYPE inner_product(const akml::MatrixInterface<MATRIX_INNER_TYPE>& a, const akml::MatrixInterface<MATRIX_INNER_TYPE>& b){
+        if (!a.isInitialized() || !b.isInitialized())
+            throw std::invalid_argument("Matrix provided is not initialized.");
+        
+        bool A_iscol=false;
+        bool B_iscol=true;
+        std::size_t dim(0);
+        if (a.getNRows() == 1 && b.getNColumns()==1 && a.getNColumns() == b.getNRows()){
+        }else if (a.getNColumns() == 1 && b.getNRows()==1 && a.getNRows() == b.getNColumns()){
+            A_iscol = true;B_iscol=false;dim=a.getNRows();
+        }else if (a.getNRows() == 1 && b.getNRows()==1 && a.getNColumns() == b.getNColumns()){
+            A_iscol = false;B_iscol=false;dim=a.getNColumns();
+        }else if (a.getNColumns() == 1 && b.getNColumns()==1 && a.getNRows() == b.getNRows()){
+            A_iscol = true;B_iscol=true;dim=a.getNRows();
+        }else{
+            throw std::invalid_argument("Matrices are not columns or lines");
+        }
+        
+        MATRIX_INNER_TYPE total(0);
+        for (std::size_t i=0; i <= dim; i++){
+            total += (A_iscol ? a.read(i, 1) : a.read(1, i)) * (B_iscol ? b.read(i, 1) : b.read(1, i));
+        }
+        return total;
+    }
+
+    template <typename MATRIX_TYPE>
+    inline MATRIX_TYPE hadamard_product(MATRIX_TYPE A, MATRIX_TYPE B){
         if (!A.isInitialized() || !B.isInitialized())
             throw std::invalid_argument("Matrix provided is not initialized.");
-        Matrix<element_type, ROWS, COLUMNS> product;
-        for (std::size_t i=1; i <= A.rows; i++){
-            for (std::size_t j=1; j <= B.columns; j++){
+        if (A.getNColumns() != B.getNColumns() || A.getNRows() != B.getNRows())
+            throw std::invalid_argument("Attempting to perform a product on non-equally sized matrix.");
+        MATRIX_TYPE product;
+        for (std::size_t i=1; i <= A.getNRows(); i++){
+            for (std::size_t j=1; j <= B.getNColumns(); j++){
                 product(i, j) = A(i, j) * B(i, j);
             }
         }
         return product;
     };
 
-    template <typename element_type, const std::size_t R1, const std::size_t C1, const std::size_t R2, const std::size_t C2>
-    inline Matrix<element_type, R1, C2> matrix_product(const Matrix<element_type, R1, C1>& A, const Matrix<element_type, R2, C2>& B){
-        if (!A.isInitialized() || !B.isInitialized())
-            throw std::invalid_argument("Matrix provided is not initialized.");
-        if (A.columns != B.rows)
-            throw std::invalid_argument("Attempting to perform a non-defined matrix product.");
-       
-        return Matrix<element_type, R1, C2>::product(A, B);
+    template <typename element_type>
+    inline DynamicMatrix<element_type> matrix_product(const DynamicMatrix<element_type>& A, const DynamicMatrix<element_type>& B){
+        return DynamicMatrix<element_type>::product(A, B);
+    };
+
+    template <typename element_type, std::size_t ROWS, std::size_t TEMPDIM, std::size_t COLUMNS>
+    inline StaticMatrix<element_type,ROWS, COLUMNS> matrix_product(const StaticMatrix<element_type, ROWS, TEMPDIM>& A, const StaticMatrix<element_type, TEMPDIM, COLUMNS>& B){
+        return StaticMatrix<element_type, ROWS, COLUMNS>::product(A, B);
+    };
+
+    template <typename element_type, std::size_t ROWS, std::size_t TEMPDIM, std::size_t COLUMNS>
+    inline Matrix<element_type,ROWS, COLUMNS> matrix_product(const Matrix<element_type, ROWS, TEMPDIM>& A, const Matrix<element_type, TEMPDIM, COLUMNS>& B){
+        return Matrix<element_type, ROWS, COLUMNS>::product(A, B);
+    };
+
+
+    template <typename element_type>
+    inline void cout_matrix(const MatrixInterface<element_type>& A){
+        return MatrixInterface<element_type>::cout(A);
         
     };
 
-    template <typename element_type, std::size_t ROWS, std::size_t COLUMNS>
-    inline void cout_matrix(const Matrix<element_type, ROWS, COLUMNS>& A){
-        if (!A.isInitialized())
+    template <typename element_type>
+    inline std::size_t arg_max(const element_type* begin, const element_type* end) {
+        return static_cast<std::size_t>(std::distance(begin, std::max_element(begin, end)));
+    }
+
+    template <typename element_type>
+    inline std::size_t arg_min(const element_type* begin, const element_type* end) {
+        return static_cast<std::size_t>(std::distance(begin, std::min_element(begin, end)));
+    }
+
+    template <typename element_type>
+    inline std::size_t arg_max(const MatrixInterface<element_type>& matrix, const bool absval_mode=false) {
+        if (!matrix.isInitialized())
             throw std::invalid_argument("Matrix provided is not initialized.");
-        return Matrix<element_type, ROWS, COLUMNS>::cout(A);
         
-    };
-
-    template <typename element_type, std::size_t ROWS>
-    inline std::size_t arg_max(std::array<element_type, ROWS> const& data) {
-        return static_cast<std::size_t>(std::distance(data.begin(), std::max_element(data.begin(), data.end())));
+        if (matrix.getNRows() != 1 && matrix.getNColumns() != 1)
+            throw std::invalid_argument("Arg_max only applies on column vectors, not on every matrix.");
+        
+        if (absval_mode){
+            element_type* newstorage = new element_type[matrix.getNRows() * matrix.getNColumns()];
+            for (std::size_t i(0); i < matrix.getNRows() * matrix.getNColumns(); i++){
+                *(newstorage+i) = std::abs(*(matrix.getStorage()+i));
+            }
+            std::size_t result = arg_max(newstorage, newstorage+matrix.getNRows() * matrix.getNColumns());
+            delete[] newstorage;
+            return result;
+        }
+        return arg_max(matrix.getStorage(), matrix.getStorageEnd());
     }
 
-    template <typename element_type, std::size_t ROWS>
-    inline std::size_t arg_min(std::array<element_type, ROWS> const& data) {
-        return static_cast<std::size_t>(std::distance(data.begin(), std::min_element(data.begin(), data.end())));
-    }
-
-    template <typename element_type, std::size_t ROWS>
-    inline std::size_t arg_max(Matrix<element_type, ROWS, 1> const& matrix, const bool absval_mode=false) {
+    template <typename element_type>
+    inline std::size_t arg_min(const MatrixInterface<element_type>& matrix, const bool absval_mode=false) {
         if (!matrix.isInitialized())
             throw std::invalid_argument("Matrix provided is not initialized.");
-        std::array<element_type, ROWS> data;
-        for (std::size_t line(0); line < ROWS; line++){
-            data[line] = std::abs(matrix.read(line+1, 1));
+        
+        if (matrix.getNRows() != 1 && matrix.getNColumns() != 1)
+            throw std::invalid_argument("Arg_min only applies on column vectors, not on every matrix.");
+        
+        if (absval_mode){
+            element_type* newstorage = new element_type[matrix.getNRows() * matrix.getNColumns()];
+            for (std::size_t i(0); i < matrix.getNRows() * matrix.getNColumns(); i++){
+                *(newstorage+i) = std::abs(*(matrix.getStorage()+i));
+            }
+            std::size_t result = arg_min(newstorage, newstorage+matrix.getNRows() * matrix.getNColumns());
+            delete[] newstorage;
+            return result;
         }
-        return arg_max(data);
-    }
-
-    template <typename element_type, std::size_t ROWS>
-    inline std::size_t arg_min(Matrix<element_type, ROWS, 1> const& matrix, const bool absval_mode=false) {
-        if (!matrix.isInitialized())
-            throw std::invalid_argument("Matrix provided is not initialized.");
-        std::array<element_type, ROWS> data;
-        for (std::size_t line(0); line < ROWS; line++){
-            data[line] = std::abs(matrix.read(line+1, 1));
-        }
-        return arg_min(data);
-    }
-
-    template <typename element_type, std::size_t ROWS>
-    inline std::size_t arg_max(Matrix<element_type, 1, ROWS> const& matrix, const bool absval_mode=false) {
-        if (!matrix.isInitialized())
-            throw std::invalid_argument("Matrix provided is not initialized.");
-        std::array<element_type, ROWS> data;
-        for (std::size_t line(0); line < ROWS; line++){
-            data[line] = std::abs(matrix.read(1, line+1));
-        }
-        return arg_max(data);
-    }
-
-    template <typename element_type, std::size_t ROWS>
-    inline std::size_t arg_min(Matrix<element_type, 1, ROWS> const& matrix, const bool absval_mode=false) {
-        if (!matrix.isInitialized())
-            throw std::invalid_argument("Matrix provided is not initialized.");
-        std::array<element_type, ROWS> data;
-        for (std::size_t line(0); line < ROWS; line++){
-            data[line] = std::abs(matrix.read(1, line+1));
-        }
-        return arg_min(data);
+        
+        return arg_min(matrix.getStorage(), matrix.getStorageEnd());
     }
 
 }
-
 #endif /* MatrixOperations_h */

@@ -111,7 +111,7 @@ class BaseGeneticAlgorithm : public GeneticAlgorithmMethods {
 protected:
     std::function<void(NeuralNetwork<NBLAYERS>&)> NNInstructions;
     std::array<NeuralNetwork<NBLAYERS>*, POP_SIZE> networksPopulation;
-    std::function<Matrix <float, OUTPUTNUMBER, 1>(Matrix <float, OUTPUTNUMBER, 1>)>* postactivation_process = nullptr;
+    std::function<StaticMatrix <float, OUTPUTNUMBER, 1>(StaticMatrix <float, OUTPUTNUMBER, 1>)>* postactivation_process = nullptr;
     std::function<void(NeuralNetwork<NBLAYERS>*, NeuralNetwork<NBLAYERS>*)>* debug_printer = nullptr;
     
     template<int i, int j>
@@ -129,7 +129,7 @@ protected:
     int conservation_bound = POP_SIZE;
     
 public:
-    static std::function<Matrix <float, OUTPUTNUMBER, 1>(Matrix <float, OUTPUTNUMBER, 1>)> ACTIVATE_ROUND;
+    static std::function<StaticMatrix <float, OUTPUTNUMBER, 1>(StaticMatrix <float, OUTPUTNUMBER, 1>)> ACTIVATE_ROUND;
     
     static inline std::function<void(NeuralNetwork<NBLAYERS>&, NeuralNetwork<NBLAYERS>*, NeuralNetwork<NBLAYERS>*)> DEFAULT_MERGING_INSTRUCTIONS = [](akml::NeuralNetwork<NBLAYERS>& child, akml::NeuralNetwork<NBLAYERS>* parent1, akml::NeuralNetwork<NBLAYERS>* parent2) {
         if (parent1 == parent2)
@@ -162,7 +162,7 @@ public:
         reproduction_bound = std::round((reproduction_rate + newcomers_rate) * POP_SIZE);
     }
     
-    inline void setPostActivationProcess(std::function<Matrix <float, OUTPUTNUMBER, 1>(Matrix <float, OUTPUTNUMBER, 1>)> func){
+    inline void setPostActivationProcess(std::function<StaticMatrix <float, OUTPUTNUMBER, 1>(StaticMatrix <float, OUTPUTNUMBER, 1>)> func){
         postactivation_process = &func;
     }
     
@@ -174,8 +174,8 @@ public:
         return networksPopulation;
     }
     
-    inline std::array< Matrix <float, OUTPUTNUMBER, 1>, POP_SIZE> evaluateNN(Matrix <float, INPUTNUMBER, 1>& input){
-        std::array< Matrix <float, OUTPUTNUMBER, 1>, POP_SIZE> localoutputs;
+    inline std::array< StaticMatrix <float, OUTPUTNUMBER, 1>, POP_SIZE> evaluateNN(StaticMatrix <float, INPUTNUMBER, 1>& input){
+        std::array< StaticMatrix <float, OUTPUTNUMBER, 1>, POP_SIZE> localoutputs;
         for (std::size_t netid(0); netid < POP_SIZE; netid++){
             localoutputs[netid] = *(networksPopulation[netid]->template process<INPUTNUMBER, OUTPUTNUMBER>(input));
             if (this->postactivation_process != nullptr)
@@ -184,8 +184,8 @@ public:
         return localoutputs;
     };
     
-    inline Matrix <float, OUTPUTNUMBER, 1> evaluateOneNN(std::size_t netid, Matrix <float, INPUTNUMBER, 1>& input){
-        Matrix <float, OUTPUTNUMBER, 1> localoutput = *(networksPopulation[netid]->template process<INPUTNUMBER, OUTPUTNUMBER>(input));
+    inline StaticMatrix <float, OUTPUTNUMBER, 1> evaluateOneNN(std::size_t netid, StaticMatrix <float, INPUTNUMBER, 1>& input){
+        StaticMatrix <float, OUTPUTNUMBER, 1> localoutput = *(networksPopulation[netid]->template process<INPUTNUMBER, OUTPUTNUMBER>(input));
         if (this->postactivation_process != nullptr)
             localoutput = postactivation_process->operator()(localoutput);
         return localoutput;
@@ -239,16 +239,16 @@ class ManualGeneticAlgorithm : public BaseGeneticAlgorithm<NBLAYERS, INPUTNUMBER
 template <size_t NBLAYERS, size_t INPUTNUMBER, size_t OUTPUTNUMBER, size_t TRAINING_LENGTH, size_t POP_SIZE=50>
 class GeneticAlgorithm : public BaseGeneticAlgorithm<NBLAYERS, INPUTNUMBER, OUTPUTNUMBER, POP_SIZE> {
 protected:
-    std::array<Matrix <float, INPUTNUMBER, 1>, TRAINING_LENGTH> inputs;
-    std::array<Matrix <float, OUTPUTNUMBER, 1>, TRAINING_LENGTH> outputs;
+    std::array<StaticMatrix <float, INPUTNUMBER, 1>, TRAINING_LENGTH> inputs;
+    std::array<StaticMatrix <float, OUTPUTNUMBER, 1>, TRAINING_LENGTH> outputs;
     
     
 public:
-    static std::function<float(std::array<Matrix <float, OUTPUTNUMBER, 1>, TRAINING_LENGTH>, std::array< Matrix <float, OUTPUTNUMBER, 1> , TRAINING_LENGTH>)> MSE;
-    static std::function<float(std::array<Matrix <float, OUTPUTNUMBER, 1>, TRAINING_LENGTH>, std::array< Matrix <float, OUTPUTNUMBER, 1> , TRAINING_LENGTH>)> ERRORS_COUNT;
+    static std::function<float(std::array<StaticMatrix <float, OUTPUTNUMBER, 1>, TRAINING_LENGTH>&, std::array< StaticMatrix <float, OUTPUTNUMBER, 1> , TRAINING_LENGTH>&)> MSE;
+    static std::function<float(std::array<StaticMatrix <float, OUTPUTNUMBER, 1>, TRAINING_LENGTH>&, std::array< StaticMatrix <float, OUTPUTNUMBER, 1> , TRAINING_LENGTH>&)> ERRORS_COUNT;
     
     
-    inline GeneticAlgorithm(const std::array<Matrix <float, INPUTNUMBER, 1>, TRAINING_LENGTH> in, const std::array<Matrix <float, OUTPUTNUMBER, 1>, TRAINING_LENGTH> out, const std::function<void(NeuralNetwork<NBLAYERS>&)> instructions = NeuralNetwork<NBLAYERS>::DEFAULT_INIT_INSTRUCTIONS) : BaseGeneticAlgorithm<NBLAYERS, INPUTNUMBER, OUTPUTNUMBER, POP_SIZE>(instructions), inputs(in), outputs(out) {
+    inline GeneticAlgorithm(const std::array<StaticMatrix <float, INPUTNUMBER, 1>, TRAINING_LENGTH> in, const std::array<StaticMatrix <float, OUTPUTNUMBER, 1>, TRAINING_LENGTH> out, const std::function<void(NeuralNetwork<NBLAYERS>&)> instructions = NeuralNetwork<NBLAYERS>::DEFAULT_INIT_INSTRUCTIONS) : BaseGeneticAlgorithm<NBLAYERS, INPUTNUMBER, OUTPUTNUMBER, POP_SIZE>(instructions), inputs(in), outputs(out) {
     };
     
     /*
@@ -260,9 +260,9 @@ public:
     
     inline NeuralNetwork<NBLAYERS>* trainNetworks(const int iterations,
                                                   const std::function<void(NeuralNetwork<NBLAYERS>&, NeuralNetwork<NBLAYERS>*, NeuralNetwork<NBLAYERS>*)> merging_instructions = BaseGeneticAlgorithm<NBLAYERS, INPUTNUMBER, OUTPUTNUMBER, POP_SIZE>::DEFAULT_MERGING_INSTRUCTIONS,
-                                                  const std::function<float(std::array<Matrix <float, OUTPUTNUMBER, 1>, TRAINING_LENGTH>, std::array< Matrix <float, OUTPUTNUMBER, 1> , TRAINING_LENGTH>)> evalfunc = GeneticAlgorithm<NBLAYERS, INPUTNUMBER, OUTPUTNUMBER, TRAINING_LENGTH, POP_SIZE>::MSE) {
+                                                  const std::function<float(std::array<StaticMatrix <float, OUTPUTNUMBER, 1>, TRAINING_LENGTH>&, std::array< StaticMatrix <float, OUTPUTNUMBER, 1> , TRAINING_LENGTH>&)> evalfunc = GeneticAlgorithm<NBLAYERS, INPUTNUMBER, OUTPUTNUMBER, TRAINING_LENGTH, POP_SIZE>::MSE) {
         for (std::size_t iteration(1); iteration <= iterations; iteration++){
-            std::array< std::array< Matrix <float, OUTPUTNUMBER, 1> , TRAINING_LENGTH>, POP_SIZE> localoutputs;
+            std::array< std::array< StaticMatrix <float, OUTPUTNUMBER, 1> , TRAINING_LENGTH>, POP_SIZE> localoutputs;
             std::array< std::pair<float, NeuralNetwork<NBLAYERS>*>, POP_SIZE> MSE;
             for (std::size_t netid(0); netid < POP_SIZE; netid++){
                 float MSE_i = 0;
