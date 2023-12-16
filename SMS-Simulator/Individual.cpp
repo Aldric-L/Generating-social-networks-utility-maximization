@@ -105,14 +105,15 @@ float Individual::computeUtility(akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1,
             }
             //RHS += std::pow((*relations)[i]->weight, Individual::gamma);
             float alpha_pow_gamma = std::pow( (*relations)[{i,0}]->weight, Individual::gamma );
-            RHS1 += ( alpha_pow_gamma ) / (1 - alpha_pow_gamma);
+            if (alpha_pow_gamma != 1)
+                RHS1 += ( alpha_pow_gamma ) / (1 - alpha_pow_gamma);
             RHS2 += (*relations)[{i,0}]->weight;
         }
         alpha(i+1, 1) = (*relations)[{i,0}]->weight;
         
     }
     //RHS = std::pow(RHS, 1/(Individual::gamma))/(GRAPH_SIZE);
-    RHS2 = std::pow(RHS2, Individual::gamma);
+    RHS2 = std::pow(RHS2, Individual::delta);
     
     akml::Matrix<float, P_DIMENSION, GRAPH_SIZE-1> P_S (*P_S_temp);
     //akml::Matrix<float, GRAPH_SIZE-1, P_DIMENSION> P_S_transpose = akml::transpose(P_S);
@@ -121,7 +122,7 @@ float Individual::computeUtility(akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1,
     
     //P_prod.transform([](float val) { return val/P_DIMENSION; });
     
-    float LHS = akml::inner_product(alpha, P_prod) * 100/P_DIMENSION;
+    float LHS = akml::inner_product(alpha, P_prod)*10/P_DIMENSION;// *100 ?
     
     #if GRAPH_SIZE < 100
     std::cout << "Utility : LHS=" << LHS << " RHS=" << RHS1+RHS2 << " Total=" << LHS-(RHS1+RHS2) << "(Gamma=" << Individual::gamma << ")" << std::endl;
@@ -159,21 +160,31 @@ akml::Matrix<float, GRAPH_SIZE-1, 1> Individual::computeUtilityGrad(akml::Matrix
     
     akml::Matrix<float, GRAPH_SIZE-1, 1> P_prod = akml::matrix_product(akml::transpose(std::get<0>(*PS_Alpha)), this->P);
     
-    P_prod.transform([](float val) { return (val*100)/P_DIMENSION; });
+    P_prod.transform([](float val) { return (val*10)/P_DIMENSION; });
     
     float scalaralpha = 0;
     for (std::size_t line(1); line <= GRAPH_SIZE-1; line++){
         //scalaralpha += (Alpha_temp(line, 1) != 0) ? std::pow(Alpha_temp(line, 1),this->gamma)/GRAPH_SIZE : 0;
         scalaralpha += Alpha_temp(line, 1);
     }
-    scalaralpha = std::pow(scalaralpha, (Individual::delta-1))*Individual::delta;
-    Alpha_temp.transform([this, &scalaralpha](float val) { return (val != 0 && val!= std::pow(val, Individual::gamma)) ? Individual::gamma * std::pow(val, (Individual::gamma-1)) / std::pow(1 - std::pow(val, Individual::gamma), 2) + scalaralpha : 0; });
+    if (scalaralpha != 0)
+        scalaralpha = std::pow(scalaralpha, (Individual::delta-1))*Individual::delta;
+    
+    Alpha_temp.transform([this, &scalaralpha](float val) {
+        if (val == 0)
+            return scalaralpha;
+        float alpha_pow_gamma = std::pow( val, Individual::gamma );
+        if (alpha_pow_gamma == 1)
+            return scalaralpha;
+        
+        return (float)( ( Individual::gamma * std::pow( val, (Individual::gamma-1) ) ) / ( std::pow(1 - alpha_pow_gamma, 2) ) ) + scalaralpha;
+    });
     grad = P_prod - Alpha_temp;
-    grad.transform([](float val) { return val/200; });
+    grad.transform([](float val) { return val/10; }); 
     //akml::cout_matrix(P_prod);
     //akml::cout_matrix(std::get<1>(PS_ALPHA));
     #if GRAPH_SIZE < 100
-        akml::cout_matrix(grad);
+        //akml::cout_matrix(grad);
     #endif
     if (rel_td)
         delete relations;
@@ -207,7 +218,9 @@ std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individua
                     break;
                 }
             }
-            if (Individual::is_greedy && rel_temp[{rel, 0}]->weight == 0 && rel == Individual::agentid){
+            if (Individual::is_greedy && rel == Individual::agentid){
+                rel_temp[{rel, 0}]->weight = 0.00001;
+            }else if (Individual::is_greedy && rel == (GRAPH_SIZE-Individual::agentid)){
                 rel_temp[{rel, 0}]->weight = 0.00001;
             }
         }
@@ -233,7 +246,9 @@ std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individua
             grad(i+1, 1) = 0;
         }
     }
-    //akml::cout_matrix(grad);
+    #if GRAPH_SIZE < 100
+        akml::cout_matrix(grad);
+    #endif
     //akml::cout_matrix(std::get<2>(PS_Alpha));
     if (target == nullptr){
         std::size_t max_i = akml::arg_max(grad, true);
@@ -242,7 +257,14 @@ std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individua
             SexualMarket::Link newlinkwanted (nullptr, nullptr, 0);
             return std::make_tuple(nullptr, nullptr, newlinkwanted, false);
         }
-        float mov = std::max(0.f, ((std::get<1>(PS_Alpha)(max_i+1, 1) <= 0.0001) ? 0.f : std::get<1>(PS_Alpha)(max_i+1, 1)) + grad(max_i+1, 1));
+    
+        float step = grad(max_i+1, 1);
+        // We do not allow to move with a step that is wider that 0.2
+        step = std::min(step, (float)0.2);
+        step = std::max(step, (float)-0.2);
+        
+        float mov = std::max(0.f, ((std::get<1>(PS_Alpha)(max_i+1, 1) <= 0.0001) ? 0.f : std::get<1>(PS_Alpha)(max_i+1, 1)) + step);
+        
         
         #if GRAPH_SIZE < 100
         std::cout << "\nWant to take action on the coef " << max_i << " in the direction of " << grad(max_i+1, 1) << " to reach " << mov << " which corresponds currently to a link of " << ((std::get<1>(PS_Alpha)(max_i+1, 1) <= 0.0001) ? 0 : std::get<1>(PS_Alpha)(max_i+1, 1)) << " which links to the individual " << std::get<2>(PS_Alpha)(max_i+1, 1);

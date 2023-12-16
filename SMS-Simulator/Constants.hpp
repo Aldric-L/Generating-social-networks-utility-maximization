@@ -16,7 +16,7 @@
 #include <chrono>
 #include <memory>
 
-#define GRAPH_SIZE 110
+#define GRAPH_SIZE 40
 #define P_DIMENSION 100
 
 #define LINKS_NB (GRAPH_SIZE*GRAPH_SIZE-GRAPH_SIZE)/2

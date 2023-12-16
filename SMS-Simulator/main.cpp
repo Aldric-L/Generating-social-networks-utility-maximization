@@ -15,9 +15,13 @@
 bool is_number(const std::string& s) { return !s.empty() && std::find_if(s.begin(), s.end(), [](unsigned char c) { return !std::isdigit(c); }) == s.end(); }
 
 int main(int argc, const char * argv[]) {
-    std::cout << "Hello, terrible World!\n";
-    
-    std::cout << "Welcome in the SMS-Simulator \n";
+    std::cout << "    _____ __  ________    _____ _                 __      __             \n";
+    std::cout << "   / ___//  |/  / ___/   / ___/(_)___ ___  __  __/ /___ _/ /_____  _____ \n";
+    std::cout << "   \\__ \\/ /|_/ /\\__ \\    \\__ \\/ / __ `__ \\/ / / / / __ `/ __/ __ \\/ ___/ \n";
+    std::cout << "  ___/ / /  / /___/ /   ___/ / / / / / / / /_/ / / /_/ / /_/ /_/ / /     \n";
+    std::cout << " /____/_/  /_//____/   /____/_/_/ /_/ /_/\\__,_/_/\\__,_/\\__/\\____/_/      \n";
+    std::cout << "\nWelcome in the SMS-Simulator ! \n";
+    std::cout << "This build will generate simulations with " << GRAPH_SIZE << " individuals. \n";
     std::string roundsinput = "";
     
     while (!is_number(roundsinput)){
@@ -58,7 +62,7 @@ int main(int argc, const char * argv[]) {
     auto processGame = [](int rds) {
         SexualMarket sm;
         sm.initializeLinks();
-        #if GRAPH_SIZE < 20
+        #if GRAPH_SIZE < 50
             std::cout << "\n A look to the initialization adjacency matrix : \n";
             akml::cout_matrix(sm.asAdjacencyMatrix());
         #endif
@@ -74,7 +78,7 @@ int main(int argc, const char * argv[]) {
                 else
                     inactive_consecutive_rounds_counter=0;
         }
-        #if GRAPH_SIZE < 20
+        #if GRAPH_SIZE < 50
             std::cout << "\n A look to the final adjacency matrix : \n";
             akml::cout_matrix(sm.asAdjacencyMatrix());
         #endif
