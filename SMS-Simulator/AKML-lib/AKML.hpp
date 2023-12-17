@@ -25,8 +25,7 @@
 
 #include "AKML_consts.hpp"
 #include "UtilityLoops.hpp"
-#include "Matrix.hpp"
-#include "MatrixOperations.hpp"
+#include "Matrices.hpp"
 #include "NeuralLayer.hpp"
 #include "NeuralNetwork.hpp"
 /*

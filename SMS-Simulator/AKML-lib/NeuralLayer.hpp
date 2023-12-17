@@ -8,7 +8,7 @@
 #ifndef NeuralLayer_hpp
 #define NeuralLayer_hpp
 
-#include "Matrix.hpp"
+#include "Matrices.hpp"
 
 namespace akml {
 

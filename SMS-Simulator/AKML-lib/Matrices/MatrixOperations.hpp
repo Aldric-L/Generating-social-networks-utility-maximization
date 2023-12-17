@@ -5,10 +5,13 @@
 //  Created by Aldric Labarthe on 20/11/2023.
 //
 
+#include "MatrixInterface.hpp"
+#include "StaticMatrix.hpp"
+#include "DynamicMatrix.hpp"
+#include "Matrix.hpp"
+
 #ifndef MatrixOperations_hpp
 #define MatrixOperations_hpp
-
-#include "Matrix.hpp"
 
 namespace akml {
     template <typename MATRIX_TYPE, typename element_type>
@@ -172,6 +175,85 @@ namespace akml {
         }
         
         return arg_min(matrix.getStorage(), matrix.getStorageEnd());
+    }
+
+
+    /*
+     * __localComputeDijkstra - THIS METHOD SHOULD NEVER BE USED
+     * It has been created to avoid code duplication due to matrix types.
+     * Please use the dijkstra_distance_algorithm who does all the verifications for you
+     * Freely adjusted from the article of geeksforgeeks.org
+     */
+    template <typename element_type>
+    inline void __localComputeDijkstra(const MatrixInterface<element_type>& matrix, const std::size_t& from, MatrixInterface<element_type>* dist){
+        akml::DynamicMatrix<element_type> shortestPathTreeSet(matrix.getNColumns(), 1);
+     
+        for (std::size_t i = 0; i < matrix.getNColumns(); i++){
+            (*dist)[{i, 0}] = ULONG_MAX;
+            shortestPathTreeSet[{i,0}] = false;
+        }
+             
+        (*dist)[{from, 0}] = 0;
+     
+        for (std::size_t count = 0; count < matrix.getNColumns() - 1; count++) {
+            std::size_t u = 0, min = ULONG_MAX;
+         
+            for (std::size_t v = 0; v < matrix.getNColumns(); v++){
+                if (shortestPathTreeSet[{v, 0}] == false && (*dist)[{v, 0}] <= min){
+                    min = (*dist)[{v, 0}];
+                    u = v;
+                }
+            }
+            shortestPathTreeSet[{u, 0}] = true;
+     
+            for (std::size_t v = 0; v < matrix.getNColumns(); v++)
+                if (!shortestPathTreeSet[{v, 0}] && matrix[{u, v}] > 0
+                    && (*dist)[{u, 0}] != INT_MAX
+                    && (*dist)[{u, 0}] + matrix[{u, v}] < (*dist)[{v, 0}])
+                    (*dist)[{v, 0}] = (*dist)[{u, 0}] + matrix[{u, v}];
+        }
+    }
+
+    /*
+     * dijkstra_distance_algorithm - Method to find the length of the shortest path between two vertices
+     */
+    template <typename element_type>
+    inline akml::DynamicMatrix<element_type> dijkstra_distance_algorithm(const MatrixInterface<element_type>& matrix, const std::size_t from) {
+        if (!matrix.isInitialized())
+            throw std::invalid_argument("Matrix provided is not initialized.");
+        
+        if (matrix.getNRows() <= 1 || matrix.getNColumns() != matrix.getNRows() || matrix.getNColumns() < from )
+            throw std::invalid_argument("Error with matrix dimension.");
+        
+        akml::DynamicMatrix<element_type> dist(matrix.getNColumns(), 1);
+        __localComputeDijkstra(matrix, from, &dist);
+        return dist;
+    }
+
+    template <typename element_type, std::size_t MATRIX_DIM>
+    inline akml::Matrix<element_type, MATRIX_DIM, 1> dijkstra_distance_algorithm(const Matrix<element_type, MATRIX_DIM, 1>& matrix, const std::size_t from) {
+        if (!matrix.isInitialized())
+            throw std::invalid_argument("Matrix provided is not initialized.");
+        
+        if (matrix.getNRows() <= 1 || matrix.getNColumns() != matrix.getNRows() || matrix.getNColumns() < from )
+            throw std::invalid_argument("Error with matrix dimension.");
+        
+        akml::Matrix<element_type, MATRIX_DIM, 1> dist;
+        __localComputeDijkstra(matrix, from, &dist);
+        return dist;
+    }
+
+    template <typename element_type, std::size_t MATRIX_DIM>
+    inline akml::StaticMatrix<element_type, MATRIX_DIM, 1> dijkstra_distance_algorithm(const StaticMatrix<element_type, MATRIX_DIM, 1>& matrix, const std::size_t from) {
+        if (!matrix.isInitialized())
+            throw std::invalid_argument("Matrix provided is not initialized.");
+        
+        if (matrix.getNRows() <= 1 || matrix.getNColumns() != matrix.getNRows() || matrix.getNColumns() < from )
+            throw std::invalid_argument("Error with matrix dimension.");
+        
+        akml::StaticMatrix<element_type, MATRIX_DIM, 1> dist;
+        __localComputeDijkstra(matrix, from, &dist);
+        return dist;
     }
 
 }

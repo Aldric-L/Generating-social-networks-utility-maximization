@@ -21,7 +21,7 @@
 #include "UtilityLoops.hpp"
 #include "NeuralNetwork.hpp"
 #include "NeuralLayer.hpp"
-#include "Matrix.hpp"
+#include "Matrices.hpp"
 
 namespace akml {
 

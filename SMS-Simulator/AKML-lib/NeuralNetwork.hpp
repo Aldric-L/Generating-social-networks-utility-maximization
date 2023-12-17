@@ -12,7 +12,7 @@
 
 #include "AKML_consts.hpp"
 #include "UtilityLoops.hpp"
-#include "Matrix.hpp"
+#include "Matrices.hpp"
 #include "NeuralLayer.hpp"
 
 namespace akml {
