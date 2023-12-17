@@ -79,8 +79,14 @@ int main(int argc, const char * argv[]) {
                     inactive_consecutive_rounds_counter=0;
         }
         #if GRAPH_SIZE < 50
-            std::cout << "\n A look to the final adjacency matrix : \n";
+            std::cout << "\n A look at the final adjacency matrix : \n";
             akml::cout_matrix(sm.asAdjacencyMatrix());
+        
+            std::cout << "\n A look at the Binary adjacency matrix : \n";
+            akml::cout_matrix(sm.asBinaryAdjacencyMatrix());
+        
+            std::cout << "\n A look at the Dijkstra adjacency matrix : \n";
+            akml::cout_matrix(sm.computeDegreesOfSeparation());
         #endif
     };
     if (threads_nb > 1){

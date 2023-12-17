@@ -125,7 +125,7 @@ float Individual::computeUtility(akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1,
     float LHS = akml::inner_product(alpha, P_prod)*10/P_DIMENSION;// *100 ?
     
     #if GRAPH_SIZE < 100
-    std::cout << "Utility : LHS=" << LHS << " RHS=" << RHS1+RHS2 << " Total=" << LHS-(RHS1+RHS2) << "(Gamma=" << Individual::gamma << ")" << std::endl;
+    std::cout << "Utility (" << agentid << " / " << GRAPH_SIZE << ") : LHS=" << LHS << " RHS=" << RHS1+RHS2 << " Total=" << LHS-(RHS1+RHS2) << "(Gamma=" << Individual::gamma << ")" << std::endl;
     #endif
     
     if (rel_td)

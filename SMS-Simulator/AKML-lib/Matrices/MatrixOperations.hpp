@@ -127,6 +127,12 @@ namespace akml {
     };
 
     template <typename element_type>
+    inline element_type abs(element_type& val){ return std::abs(val); }
+
+    template<>
+    inline std::size_t abs(std::size_t& val){ return val; }
+
+    template <typename element_type>
     inline std::size_t arg_max(const element_type* begin, const element_type* end) {
         return static_cast<std::size_t>(std::distance(begin, std::max_element(begin, end)));
     }
@@ -147,7 +153,7 @@ namespace akml {
         if (absval_mode){
             element_type* newstorage = new element_type[matrix.getNRows() * matrix.getNColumns()];
             for (std::size_t i(0); i < matrix.getNRows() * matrix.getNColumns(); i++){
-                *(newstorage+i) = std::abs(*(matrix.getStorage()+i));
+                *(newstorage+i) = akml::abs(*(matrix.getStorage()+i));
             }
             std::size_t result = arg_max(newstorage, newstorage+matrix.getNRows() * matrix.getNColumns());
             delete[] newstorage;
@@ -167,7 +173,7 @@ namespace akml {
         if (absval_mode){
             element_type* newstorage = new element_type[matrix.getNRows() * matrix.getNColumns()];
             for (std::size_t i(0); i < matrix.getNRows() * matrix.getNColumns(); i++){
-                *(newstorage+i) = std::abs(*(matrix.getStorage()+i));
+                *(newstorage+i) = akml::abs(*(matrix.getStorage()+i));
             }
             std::size_t result = arg_min(newstorage, newstorage+matrix.getNRows() * matrix.getNColumns());
             delete[] newstorage;
@@ -177,15 +183,89 @@ namespace akml {
         return arg_min(matrix.getStorage(), matrix.getStorageEnd());
     }
 
+    template <typename element_type>
+    inline element_type max(const element_type* begin, const element_type* end) {
+        return *std::max_element(begin, end);
+    }
+
+    template <typename element_type>
+    inline element_type min(const element_type* begin, const element_type* end) {
+        return *std::min_element(begin, end);
+    }
+
+    template <typename element_type>
+    inline element_type max(const MatrixInterface<element_type>& matrix) {
+        if (!matrix.isInitialized())
+            throw std::invalid_argument("Matrix provided is not initialized.");
+        
+        if (matrix.getNRows() != 1 && matrix.getNColumns() != 1)
+            throw std::invalid_argument("Max only applies on column vectors, not on every matrix.");
+        
+        return max(matrix.getStorage(), matrix.getStorageEnd());
+    }
+
+    template <typename element_type>
+    inline element_type min(const MatrixInterface<element_type>& matrix, const bool absval_mode=false) {
+        if (!matrix.isInitialized())
+            throw std::invalid_argument("Matrix provided is not initialized.");
+        
+        if (matrix.getNRows() != 1 && matrix.getNColumns() != 1)
+            throw std::invalid_argument("Min only applies on column vectors, not on every matrix.");
+
+        return min(matrix.getStorage(), matrix.getStorageEnd());
+    }
+
+    template <typename element_type>
+    inline float mean(const MatrixInterface<element_type>& matrix, const bool absval_mode=false, const element_type ignore=static_cast<element_type>(1)) {
+        if (!matrix.isInitialized())
+            throw std::invalid_argument("Matrix provided is not initialized.");
+        
+        if (matrix.getNRows() != 1 && matrix.getNColumns() != 1)
+            throw std::invalid_argument("Mean only applies on column vectors, not on every matrix.");
+        
+        float mean = 0.f;
+        for (std::size_t i(0); i < matrix.getNRows() * matrix.getNColumns(); i++){
+            if (ignore == static_cast<element_type>(1) || *(matrix.getStorage()+i) != ignore)
+                mean += absval_mode ? akml::abs(*(matrix.getStorage()+i)) : *(matrix.getStorage()+i);
+                //mean += absval_mode ? std::abs(*(matrix.getStorage()+i)) : *(matrix.getStorage()+i);
+
+        }
+        mean = mean / std::max(matrix.getNColumns(),matrix.getNRows());
+        return mean;
+    }
+
+    template <typename element_type>
+    inline float stat_var(const MatrixInterface<element_type>& matrix, const element_type ignore=static_cast<element_type>(1),  float mean=0) {
+        if (!matrix.isInitialized())
+            throw std::invalid_argument("Matrix provided is not initialized.");
+        
+        if (matrix.getNRows() != 1 && matrix.getNColumns() != 1)
+            throw std::invalid_argument("Variance only applies on column vectors, not on every matrix.");
+        
+        if (mean == 0){
+            for (std::size_t i(0); i < matrix.getNRows() * matrix.getNColumns(); i++){
+                if (ignore == static_cast<element_type>(1) || *(matrix.getStorage()+i) != ignore)
+                    mean += *(matrix.getStorage()+i);
+            }
+            mean = mean / std::max(matrix.getNColumns(),matrix.getNRows());
+        }
+        float variance = 0.f;
+        for (std::size_t i(0); i < matrix.getNRows() * matrix.getNColumns(); i++){
+            if (ignore == static_cast<element_type>(1) || *(matrix.getStorage()+i) != ignore)
+                variance += std::pow(mean - *(matrix.getStorage()+i), 2);
+        }
+        variance = variance / std::max(matrix.getNColumns(),matrix.getNRows());
+        return variance;
+    }
 
     /*
      * __localComputeDijkstra - THIS METHOD SHOULD NEVER BE USED
      * It has been created to avoid code duplication due to matrix types.
      * Please use the dijkstra_distance_algorithm who does all the verifications for you
-     * Freely adjusted from the article of geeksforgeeks.org
+     * Freely adjusted from an article of geeksforgeeks.org
      */
     template <typename element_type>
-    inline void __localComputeDijkstra(const MatrixInterface<element_type>& matrix, const std::size_t& from, MatrixInterface<element_type>* dist){
+    inline void __localComputeDijkstra(const MatrixInterface<element_type>& matrix, const std::size_t& from, MatrixInterface<std::size_t>* dist){
         akml::DynamicMatrix<element_type> shortestPathTreeSet(matrix.getNColumns(), 1);
      
         for (std::size_t i = 0; i < matrix.getNColumns(); i++){
@@ -196,7 +276,7 @@ namespace akml {
         (*dist)[{from, 0}] = 0;
      
         for (std::size_t count = 0; count < matrix.getNColumns() - 1; count++) {
-            std::size_t u = 0, min = ULONG_MAX;
+            std::size_t u = ULONG_MAX, min = ULONG_MAX;
          
             for (std::size_t v = 0; v < matrix.getNColumns(); v++){
                 if (shortestPathTreeSet[{v, 0}] == false && (*dist)[{v, 0}] <= min){
@@ -204,54 +284,56 @@ namespace akml {
                     u = v;
                 }
             }
-            shortestPathTreeSet[{u, 0}] = true;
-     
-            for (std::size_t v = 0; v < matrix.getNColumns(); v++)
-                if (!shortestPathTreeSet[{v, 0}] && matrix[{u, v}] > 0
-                    && (*dist)[{u, 0}] != INT_MAX
-                    && (*dist)[{u, 0}] + matrix[{u, v}] < (*dist)[{v, 0}])
-                    (*dist)[{v, 0}] = (*dist)[{u, 0}] + matrix[{u, v}];
+            if (u != ULONG_MAX){
+                shortestPathTreeSet[{u, 0}] = true;
+         
+                for (std::size_t v = 0; v < matrix.getNColumns(); v++)
+                    if (!shortestPathTreeSet[{v, 0}] && matrix[{u, v}] > 0
+                        && (*dist)[{u, 0}] != ULONG_MAX
+                        && (*dist)[{u, 0}] + matrix[{u, v}] < (*dist)[{v, 0}])
+                        (*dist)[{v, 0}] = (*dist)[{u, 0}] + matrix[{u, v}];
+            }
         }
     }
 
     /*
      * dijkstra_distance_algorithm - Method to find the length of the shortest path between two vertices
      */
+    template <typename element_type, std::size_t MATRIX_DIM>
+    inline akml::Matrix<std::size_t, MATRIX_DIM, 1> dijkstra_distance_algorithm(const Matrix<element_type, MATRIX_DIM, MATRIX_DIM>& matrix, const std::size_t from) {
+        if (!matrix.isInitialized())
+            throw std::invalid_argument("Matrix provided is not initialized.");
+        
+        if (matrix.getNRows() <= 1 || matrix.getNColumns() != matrix.getNRows() || matrix.getNColumns() < from )
+            throw std::invalid_argument("Error with matrix dimension.");
+        
+        akml::Matrix<std::size_t, MATRIX_DIM, 1> dist;
+        __localComputeDijkstra(matrix, from, &dist);
+        return dist;
+    }
+
     template <typename element_type>
-    inline akml::DynamicMatrix<element_type> dijkstra_distance_algorithm(const MatrixInterface<element_type>& matrix, const std::size_t from) {
+    inline akml::DynamicMatrix<std::size_t> dijkstra_distance_algorithm(const DynamicMatrix<element_type>& matrix, const std::size_t from) {
         if (!matrix.isInitialized())
             throw std::invalid_argument("Matrix provided is not initialized.");
         
         if (matrix.getNRows() <= 1 || matrix.getNColumns() != matrix.getNRows() || matrix.getNColumns() < from )
             throw std::invalid_argument("Error with matrix dimension.");
         
-        akml::DynamicMatrix<element_type> dist(matrix.getNColumns(), 1);
+        akml::DynamicMatrix<std::size_t> dist(matrix.getNColumns(), 1);
         __localComputeDijkstra(matrix, from, &dist);
         return dist;
     }
 
     template <typename element_type, std::size_t MATRIX_DIM>
-    inline akml::Matrix<element_type, MATRIX_DIM, 1> dijkstra_distance_algorithm(const Matrix<element_type, MATRIX_DIM, 1>& matrix, const std::size_t from) {
+    inline akml::StaticMatrix<std::size_t, MATRIX_DIM, 1> dijkstra_distance_algorithm(const StaticMatrix<element_type, MATRIX_DIM, MATRIX_DIM>& matrix, const std::size_t from) {
         if (!matrix.isInitialized())
             throw std::invalid_argument("Matrix provided is not initialized.");
         
         if (matrix.getNRows() <= 1 || matrix.getNColumns() != matrix.getNRows() || matrix.getNColumns() < from )
             throw std::invalid_argument("Error with matrix dimension.");
         
-        akml::Matrix<element_type, MATRIX_DIM, 1> dist;
-        __localComputeDijkstra(matrix, from, &dist);
-        return dist;
-    }
-
-    template <typename element_type, std::size_t MATRIX_DIM>
-    inline akml::StaticMatrix<element_type, MATRIX_DIM, 1> dijkstra_distance_algorithm(const StaticMatrix<element_type, MATRIX_DIM, 1>& matrix, const std::size_t from) {
-        if (!matrix.isInitialized())
-            throw std::invalid_argument("Matrix provided is not initialized.");
-        
-        if (matrix.getNRows() <= 1 || matrix.getNColumns() != matrix.getNRows() || matrix.getNColumns() < from )
-            throw std::invalid_argument("Error with matrix dimension.");
-        
-        akml::StaticMatrix<element_type, MATRIX_DIM, 1> dist;
+        akml::StaticMatrix<std::size_t, MATRIX_DIM, 1> dist;
         __localComputeDijkstra(matrix, from, &dist);
         return dist;
     }

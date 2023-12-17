@@ -34,7 +34,7 @@ class SexualMarket {
         akml::Matrix<Individual*, GRAPH_SIZE, 1> individuals;
         typedef akml::Save<6, std::size_t, unsigned long int, unsigned long int, float, float, bool> EdgeSaveTrackerType;
         typedef akml::Save<3, std::size_t, unsigned long int, float> UtilitySaveTrackerType;
-        typedef akml::Save<5, std::size_t, unsigned long int, float, bool, std::string> VerticesSaveTrackerType;
+        typedef akml::Save<8, std::size_t, unsigned long int, float, bool, float, float, std::size_t, std::string> VerticesSaveTrackerType;
         akml::CSV_Saver<EdgeSaveTrackerType> edgeTrackersManager;
         akml::CSV_Saver<UtilitySaveTrackerType> utilityTrackersManager;
         akml::CSV_Saver<VerticesSaveTrackerType> verticesTrackersManager;
@@ -54,6 +54,8 @@ class SexualMarket {
         void editLink(SexualMarket::Link* link, float newWeight, bool accepted=true);
         unsigned int processARound();
         akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> asAdjacencyMatrix();
+        akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> asBinaryAdjacencyMatrix(akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE>* adjacencymatrix = nullptr);
+        akml::Matrix<std::size_t, GRAPH_SIZE, GRAPH_SIZE> computeDegreesOfSeparation(akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE>* binaryadjacencymatrix = nullptr);
 
 
 };
