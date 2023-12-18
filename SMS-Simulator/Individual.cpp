@@ -233,7 +233,9 @@ std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individua
         delete rel_temp[{rel, 0}];
     }
     
+    #if GRAPH_SIZE < 100
     std::cout << "Computing grad" << std::endl;
+    #endif
     akml::DynamicMatrix<float> grad (Individual::computeUtilityGrad(relations, PS_Alpha));
     //akml::cout_matrix(grad);
     //std::cout << "Now let's reduce the grad to accessible individuals (scope=" << scope.size() << ")" << std::endl;
@@ -253,7 +255,9 @@ std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individua
     if (target == nullptr){
         std::size_t max_i = akml::arg_max(grad, true);
         if (std::abs(grad(max_i+1, 1)) < 0.01){
+            #if GRAPH_SIZE < 100
             std::cout << "\nWant to do an unsignifiant action. Aborted.";
+            #endif
             SexualMarket::Link newlinkwanted (nullptr, nullptr, 0);
             return std::make_tuple(nullptr, nullptr, newlinkwanted, false);
         }

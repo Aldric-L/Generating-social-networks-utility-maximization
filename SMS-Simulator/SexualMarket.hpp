@@ -52,7 +52,7 @@ class SexualMarket {
         std::vector<SexualMarket::Link> getIndividualScope(Individual* indiv);
         void editLink(Individual* indiv1, Individual* indiv2, float newWeight, bool accepted=true);
         void editLink(SexualMarket::Link* link, float newWeight, bool accepted=true);
-        unsigned int processARound();
+        unsigned int processARound(std::size_t totalrounds=0);
         akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> asAdjacencyMatrix();
         akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> asBinaryAdjacencyMatrix(akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE>* adjacencymatrix = nullptr);
         akml::Matrix<std::size_t, GRAPH_SIZE, GRAPH_SIZE> computeDegreesOfSeparation(akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE>* binaryadjacencymatrix = nullptr);

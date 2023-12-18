@@ -15,8 +15,9 @@
 #include <ctime>
 #include <chrono>
 #include <memory>
+#include <thread>
 
-#define GRAPH_SIZE 1000
+#define GRAPH_SIZE 500
 #define P_DIMENSION 100
 
 #define LINKS_NB (GRAPH_SIZE*GRAPH_SIZE-GRAPH_SIZE)/2

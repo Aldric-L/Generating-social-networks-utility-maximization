@@ -8,6 +8,9 @@
 #include "Individual.hpp"
 
 SexualMarket::SexualMarket(){
+    #if GRAPH_SIZE >= 100
+        std::cout << "\nThread " << std::this_thread::get_id() << " - Status: Creation";
+    #endif
     links.reserve(LINKS_NB);
     SexualMarket::EdgeSaveTrackerType::default_parameters_name = {{ "round", "vertex1", "vertex2", "old_weight", "new_weight", "accepted" }};
     SexualMarket::UtilitySaveTrackerType::default_parameters_name = {{ "round", "agentid", "utility" }};
@@ -92,6 +95,9 @@ void SexualMarket::initializeLinks(){
         verticesTrackersManager.addSave(vertice_save);
     }
     SexualMarket::currentRound = 1;
+    #if GRAPH_SIZE >= 100
+        std::cout << "\nThread " << std::this_thread::get_id() << " - Status: Initialized";
+    #endif
 }
 
 akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> SexualMarket::getIndividualRelations(Individual* indiv) {
@@ -193,20 +199,35 @@ void SexualMarket::editLink(SexualMarket::Link* link, float newWeight, bool acce
 }
 
 
-unsigned int SexualMarket::processARound() {
-    std::cout << "\n\n ---- ROUND " << SexualMarket::currentRound;
+unsigned int SexualMarket::processARound(std::size_t totalrounds) {
+    #if GRAPH_SIZE < 100
+        std::cout << "\n\n ---- ROUND " << SexualMarket::currentRound;
+    #endif
     unsigned int inactions(0);
     for (std::size_t i(0); i < GRAPH_SIZE; i++){
         Individual* nodei = SexualMarket::getIndividual(i);
-        std::cout << "\n --Individual (" << i+1 << " / " << GRAPH_SIZE <<  ") " << nodei << std::endl;
+        #if GRAPH_SIZE < 100
+            std::cout << "\n --Individual (" << i+1 << " / " << GRAPH_SIZE <<  ") " << nodei << std::endl;
+        #endif
         inactions += nodei->takeAction() ? 0 : 1;
     }
-    for (std::size_t i(0); i < GRAPH_SIZE; i++){
-        //Individual* nodei = SexualMarket::getIndividual(i);
-        //SexualMarket::UtilitySaveTrackerType save (SexualMarket::currentRound, nodei->agentid, nodei->computeUtility(nullptr));
-        SexualMarket::UtilitySaveTrackerType save (SexualMarket::currentRound, SexualMarket::getIndividual(i)->agentid, SexualMarket::getIndividual(i)->computeUtility(nullptr));
-        SexualMarket::utilityTrackersManager.addSave(save);
-    }
+    #if GRAPH_SIZE >= 100
+        if ((totalrounds != 0 && totalrounds > 100 && SexualMarket::currentRound % (totalrounds/10) == 0) || SexualMarket::currentRound == 1) {
+            std::cout << "\n Computing utility: round " << SexualMarket::currentRound << " / " << totalrounds << " thread " << std::this_thread::get_id();
+            for (std::size_t i(0); i < GRAPH_SIZE; i++){
+                SexualMarket::UtilitySaveTrackerType save (SexualMarket::currentRound, SexualMarket::getIndividual(i)->agentid, SexualMarket::getIndividual(i)->computeUtility(nullptr));
+                SexualMarket::utilityTrackersManager.addSave(save);
+            }
+        }else if (totalrounds != 0 && totalrounds > 100 && SexualMarket::currentRound % (totalrounds/100) == 0){
+            std::cout << "\nThread " << std::this_thread::get_id() << " - Status: " << SexualMarket::currentRound*100/totalrounds << "% completed";
+        }
+    #elif
+        for (std::size_t i(0); i < GRAPH_SIZE; i++){
+            SexualMarket::UtilitySaveTrackerType save (SexualMarket::currentRound, SexualMarket::getIndividual(i)->agentid, SexualMarket::getIndividual(i)->computeUtility(nullptr));
+            SexualMarket::utilityTrackersManager.addSave(save);
+        }
+    #endif
+    
     #if GRAPH_SIZE >= 100
     if (SexualMarket::currentRound % 100 == 0){
         SexualMarket::edgeTrackersManager.bufferize(false);

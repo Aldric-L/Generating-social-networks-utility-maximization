@@ -1,8 +1,11 @@
 //
-//  main.cpp
-//  Sexual Market Simulation
+//     _____ __  ________    _____ _                 __      __
+//   / ___//  |/  / ___/   / ___/(_)___ ___  __  __/ /___ _/ /_____  _____
+//   \__ \/ /|_/ /\__ \    \__ \/ / __ `__ \/ / / / / __ `/ __/ __ \/ ___/
+//  ___/ / /  / /___/ /   ___/ / / / / / / / /_/ / / /_/ / /_/ /_/ / /
+// /____/_/  /_//____/   /____/_/_/ /_/ /_/\__,_/_/\__,_/\__/\____/_/
 //
-//  Created by SMS&co on 21/03/2023.
+//                                                      SMS Associates 2023
 //
 
 #include <iostream>
@@ -56,8 +59,8 @@ int main(int argc, const char * argv[]) {
     }
     Individual::GREEDY_SHARE = static_cast<unsigned short int>(std::stoi(roundsinput));
     
-    if (threads_nb > 1)
-        std::cout.setstate(std::ios_base::failbit);
+    //if (threads_nb > 1)
+        //std::cout.setstate(std::ios_base::failbit);
     
     auto processGame = [](int rds) {
         SexualMarket sm;
@@ -73,7 +76,7 @@ int main(int argc, const char * argv[]) {
                     break;
                 }
                 
-                if ((sm.processARound()) == GRAPH_SIZE)
+                if (sm.processARound(static_cast<std::size_t>(rds)) == GRAPH_SIZE)
                     inactive_consecutive_rounds_counter++;
                 else
                     inactive_consecutive_rounds_counter=0;
@@ -108,3 +111,20 @@ int main(int argc, const char * argv[]) {
     
     return 0;
 }
+
+//                                                                 AA     LL
+//                 pzr--}fC/][dn1wYnfJ                            AAAA    LL
+//              c{?_x[v){Ur}][ft(vX(|wzrmOcQ                     AA |AA   LL
+//            #][_j(L}u-[[{x[{)q|)fztfXxUQuJkUm                 AAAAAAA   LL
+//        .])-1-U)t}-v})}}]L/(}hZjjmtXdYCZuCkJCnLC|Xx          |AA   AAA  LLLLLLLL
+//      I{(}11_-+/-q{p}f[1Oj{){QnfL|J00kC*#aqh0zQnjvwz/fCj^
+//    "tf1f(fxtujXzt(jcf{{vX/t|bOxJ8hmJ0zwLwJCqzCxYLrYXXYcxx?
+//   >()vxcJpUaXMUfdtcuj{]XrtrkkQC0#WhwkhokwCCzChbdcQB@BuO|vxn[
+//  "f(|xcOhW&OB@B*BMvJ//(cCzXmqzhB%Mo*qrbUZLbma0&paB@B&X*Zw)xruLx/"
+//  rv/    a%Mw88(  ./jujn0nvu   mh%%B%B%ad*Qk0Y0#B@@@@@@*puQqdt/ntCujx/)
+// .xu  O  oh88c  .`.1ptL|OXY   @@@@c   #mJhd_        BBqhoLYkd#ju/j|rtnfnrjxjx~'
+// `YuO  doBa`    nOCOXmQhmw    @@@B"    #ozbJk,         {?{jb*QbO#W*8*#mha0LxfIl`
+//  cCZwdk&,      jzzQcak*u.    %%%%B    WoddJmO_            ddddbM*p/U0dbM*p/Ueudk
+//   hMW          J[fY:          wBB8    M*p/U0{                 wLwJCqzCxYwLwJCqzfdfd
+//                !qv              !qv   `}czjf:                    wLwJCqzCxYwLwJCddddfd
+//
