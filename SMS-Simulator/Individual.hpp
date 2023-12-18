@@ -14,14 +14,14 @@ class SexualMarket;
 
 class Individual {
 	protected:
-        typedef std::tuple<akml::Matrix<float, P_DIMENSION, GRAPH_SIZE-1>, akml::Matrix<float, GRAPH_SIZE-1, 1>, akml::Matrix<Individual*, GRAPH_SIZE-1, 1>, akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1>> PSAndAlphaTuple;
+        typedef std::tuple<akml::DynamicMatrix<float>, akml::DynamicMatrix<float>, akml::DynamicMatrix<Individual*>, akml::DynamicMatrix<SexualMarket::Link*>> PSAndAlphaTuple;
     
         akml::Matrix<float, P_DIMENSION, 1> P;
         SexualMarket *world;
         float utility = 0;
     
         PSAndAlphaTuple buildPSAndAlpha (const akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1>& relations);
-        akml::Matrix<float, GRAPH_SIZE-1, 1> computeUtilityGrad(akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1>* relations=nullptr, PSAndAlphaTuple* PS_Alpha=nullptr);
+        akml::DynamicMatrix<float> computeUtilityGrad(akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1>& relations, PSAndAlphaTuple& PS_Alpha);
         std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> preprocessTakeAction(Individual* target=nullptr);
         
 

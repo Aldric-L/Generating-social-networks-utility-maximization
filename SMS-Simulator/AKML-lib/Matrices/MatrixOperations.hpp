@@ -37,15 +37,15 @@ namespace akml {
         for (std::size_t i=0; i < old_matrix.getNColumns(); i++){
             for (std::size_t j=0; j < old_matrix.getNRows(); j++){
                 *(localdata+i*(old_matrix.getNRows())+j) = old_matrix.read(j+1, i+1);
-
             }
         }
+
         old_matrix.deleteInternStorage();
         old_matrix.getStorage() = localdata;
         old_matrix.getStorageEnd() = localdata+(old_matrix.getNRows())*(old_matrix.getNColumns());
         std::size_t old_rows = old_matrix.getNRows();
-        old_matrix.setNRows(old_matrix.getNColumns());
-        old_matrix.setNColumns(old_rows);
+        old_matrix.directSetNRows(old_matrix.getNColumns());
+        old_matrix.directSetNColumns(old_rows);
         return old_matrix;
     }
 

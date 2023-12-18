@@ -12,11 +12,16 @@
 
 namespace akml {
 
+template <typename element_type, std::size_t ROWS, std::size_t COLUMNS>
+class Matrix;
+
 template <typename element_type>
 class DynamicMatrix : public MatrixInterface<element_type>{
 public:
-    inline void setNColumns(std::size_t& c) { resize(this->rows, c); }
-    inline void setNRows(std::size_t& r) { resize(r, this->columns); }
+    inline void setNColumns(std::size_t c) { resize(this->rows, c); }
+    inline void setNRows(std::size_t r) { resize(r, this->columns); }
+    inline void directSetNColumns(std::size_t c) { this->columns = c; }
+    inline void directSetNRows(std::size_t r) { this->rows = r; }
     
     inline void resize(std::size_t r, std::size_t c){
         if (this->isInitialized()){
@@ -67,6 +72,36 @@ public:
     //Column-based constructor
     template<std::size_t COLUMNS>
     inline DynamicMatrix(const std::array<akml::DynamicMatrix<element_type>, COLUMNS>& cols) : MatrixInterface<element_type>(cols[0].getNRows(), COLUMNS) {
+        if (cols.size() == 0)
+            throw std::invalid_argument("Empty initialize list.");
+        
+        this->createInternStorage();
+        for (std::size_t line(0); line < this->rows; line++){
+            for (std::size_t col(0); col < this->columns; col++){
+                *(this->m_data + line*(this->columns)+col) = cols[col].read(line+1, 1);
+            }
+        }
+        
+        //std::cout << "A matrix is born " << this << " - Mdata ref " << m_data << std::endl;
+    }
+    
+    //Column-based constructor
+    inline DynamicMatrix(const std::vector<akml::DynamicMatrix<element_type>>& cols) : MatrixInterface<element_type>(cols[0].getNRows(), cols.size()) {
+        if (cols.size() == 0)
+            throw std::invalid_argument("Empty initialize list.");
+        
+        this->createInternStorage();
+        for (std::size_t line(0); line < this->rows; line++){
+            for (std::size_t col(0); col < this->columns; col++){
+                *(this->m_data + line*(this->columns)+col) = cols[col].read(line+1, 1);
+            }
+        }
+        
+        //std::cout << "A matrix is born " << this << " - Mdata ref " << m_data << std::endl;
+    }
+    
+    template<std::size_t ROWS>
+    inline DynamicMatrix(const std::vector<akml::Matrix<element_type, ROWS, 1>>& cols) : MatrixInterface<element_type>(ROWS, cols.size()) {
         if (cols.size() == 0)
             throw std::invalid_argument("Empty initialize list.");
         

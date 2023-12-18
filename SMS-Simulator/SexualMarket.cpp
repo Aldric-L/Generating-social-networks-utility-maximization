@@ -129,6 +129,15 @@ std::vector<SexualMarket::Link> SexualMarket::getIndividualScope(Individual* ind
             else
                 target0 = linksofIndividual[{level0, 0}]->first;
             
+            bool redundant = false;
+            for (int icheck(0); icheck < scope.size(); icheck++){
+                if ((scope[icheck].first == linksofIndividual[{level0, 0}]->first && scope[icheck].second == linksofIndividual[{level0, 0}]->second)
+                    || (scope[icheck].first == linksofIndividual[{level0, 0}]->second && scope[icheck].second == linksofIndividual[{level0, 0}]->first))
+                    redundant = true;
+            }
+            if (!redundant)
+                scope.push_back(*linksofIndividual[{level0, 0}]);
+            
             akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> linksofTarget = SexualMarket::getIndividualRelations(target0);
             for (std::size_t level1(0); level1 < GRAPH_SIZE-1; level1++){
                 if (linksofTarget[{level1, 0}]->weight > 0){
@@ -153,7 +162,6 @@ std::vector<SexualMarket::Link> SexualMarket::getIndividualScope(Individual* ind
                     }
                 }
             }
-            scope.push_back(*linksofIndividual[{level0, 0}]);
             
         }
     }
