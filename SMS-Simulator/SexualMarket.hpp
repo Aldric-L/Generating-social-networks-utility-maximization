@@ -27,24 +27,24 @@ class SexualMarket {
         };
         
     protected:
-        // We replace std::array<Link, LINKS_NB> links; by std::vector in order to register the Links in the heap and not in the stack
-        // This is, in fact, very sad. I love static things. I grief the static array (no way to use my static Matrices with objects).
+        // We replace std::array<Link, LINKS_NB> links; by std::vector in order to register the Links in the heap and not in the stack. This is, in fact, very sad. I love static things. I grief the static array.
         std::vector<Link> links;
         std::size_t currentRound = 0;
         akml::Matrix<Individual*, GRAPH_SIZE, 1> individuals;
         typedef akml::Save<6, std::size_t, unsigned long int, unsigned long int, float, float, bool> EdgeSaveTrackerType;
         typedef akml::Save<3, std::size_t, unsigned long int, float> UtilitySaveTrackerType;
         typedef akml::Save<8, std::size_t, unsigned long int, float, bool, float, float, std::size_t, std::string> VerticesSaveTrackerType;
+        typedef akml::MatrixSave<GRAPH_SIZE+1, float> ClusteringSaveTrackerType;
         akml::CSV_Saver<EdgeSaveTrackerType> edgeTrackersManager;
         akml::CSV_Saver<UtilitySaveTrackerType> utilityTrackersManager;
         akml::CSV_Saver<VerticesSaveTrackerType> verticesTrackersManager;
+        akml::CSV_Saver<ClusteringSaveTrackerType> clusteringTrackersManager;
 
     public:
         static inline bool SHOULD_I_LOG = true;
         SexualMarket();
         ~SexualMarket();    
     
-        // WIP - for now initialization is hardcoded
         void initializeLinks();
         akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> getIndividualRelations(Individual* indiv);
         akml::Matrix<Individual*, GRAPH_SIZE, 1> getIndividuals();
@@ -56,6 +56,7 @@ class SexualMarket {
         akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> asAdjacencyMatrix();
         akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> asBinaryAdjacencyMatrix(akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE>* adjacencymatrix = nullptr);
         akml::Matrix<std::size_t, GRAPH_SIZE, GRAPH_SIZE> computeDegreesOfSeparation(akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE>* binaryadjacencymatrix = nullptr);
+        akml::Matrix<float, GRAPH_SIZE+1, 1> computeClusteringCoefficients(akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE>* binaryadjacencymatrix = nullptr);
 
 
 };

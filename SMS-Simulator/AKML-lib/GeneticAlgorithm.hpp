@@ -114,7 +114,7 @@ protected:
     std::function<StaticMatrix <float, OUTPUTNUMBER, 1>(StaticMatrix <float, OUTPUTNUMBER, 1>)>* postactivation_process = nullptr;
     std::function<void(NeuralNetwork<NBLAYERS>*, NeuralNetwork<NBLAYERS>*)>* debug_printer = nullptr;
     
-    template<int i, int j>
+    template<std::size_t i, std::size_t j>
     struct mergeLayer_functor {
         static void run(akml::NeuralNetwork<NBLAYERS>* child, akml::NeuralNetwork<NBLAYERS>* parent1, akml::NeuralNetwork<NBLAYERS>* parent2) {
             GeneticAlgorithmMethods::mergeLayers<akml::NeuralNetwork<NBLAYERS>, akml::NeuralLayer<akml::NN_STRUCTURE[j], akml::NN_STRUCTURE[i]>>(i+2, parent1, parent2, child);

@@ -7,44 +7,45 @@
 
 #ifndef UtilityLoops_h
 #define UtilityLoops_h
+
 namespace akml {
-    template <int from, int to>
+    template <std::size_t from, std::size_t to>
     struct for_ {
-        template<template<int, int> class Fn, typename typearg>
+        template<template<std::size_t, std::size_t> class Fn, typename typearg>
         static void run(typearg arg) {
             Fn<from, from+1>::run(arg);
             for_<from + 1, to>::template run<Fn, typearg>(arg);
         }
         
-        template<template<int> class Fn, typename typearg>
+        template<template<std::size_t> class Fn, typename typearg>
         static void run(typearg arg) {
             Fn<from>::run(arg);
             for_<from + 1, to>::template run<Fn, typearg>(arg);
         }
         
-        template<template<int, int> class Fn, typename... typeargs>
+        template<template<std::size_t, std::size_t> class Fn, typename... typeargs>
         static void run(typeargs... args) {
             Fn<from, from+1>::run(args...);
             for_<from + 1, to>::template run<Fn, typeargs...>(args...);
         }
         
-        template<template<int> class Fn, typename... typeargs>
+        template<template<std::size_t> class Fn, typename... typeargs>
         static void run(typeargs... args) {
             Fn<from>::run(args...);
             for_<from + 1, to>::template run<Fn, typeargs...>(args...);
         }
     };
 
-    template <int to>
+    template <std::size_t to>
     struct for_<to, to> {
-        template<template<int, int> class Fn, typename... typeargs>
+        template<template<std::size_t, std::size_t> class Fn, typename... typeargs>
         static void run(typeargs... args) {}
-        template<template<int> class Fn, typename... typeargs>
+        template<template<std::size_t> class Fn, typename... typeargs>
         static void run(typeargs... args) {}
         
-        template<template<int, int> class Fn, typename typearg>
+        template<template<std::size_t, std::size_t> class Fn, typename typearg>
         static void run(typearg arg) {}
-        template<template<int> class Fn, typename typearg>
+        template<template<std::size_t> class Fn, typename typearg>
         static void run(typearg arg) {}
     };
 

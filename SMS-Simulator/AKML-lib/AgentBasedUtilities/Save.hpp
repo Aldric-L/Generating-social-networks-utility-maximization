@@ -5,18 +5,19 @@
 //  Created by Aldric Labarthe on 05/11/2023.
 //
 
-#ifndef Save_hpp
-#define Save_hpp
+#ifndef AKML_Save_hpp
+#define AKML_Save_hpp
 
 #include "../AKML.hpp"
 #include <tuple>
 
 namespace akml {
+    class AbstractSave {};
 
-    template <unsigned short int parameters_nb, typename... types>
-    class Save {
+    template <std::size_t parameters_nb, typename... types>
+    class Save : public AbstractSave{
         private:
-            template<int i>
+            template<std::size_t i>
             struct exportLayer_functor {
                 static std::string to_string(const std::string elem){ return elem; }
                 template <typename T>
@@ -36,9 +37,9 @@ namespace akml {
         public:
             static inline std::array<std::string, parameters_nb> default_parameters_name;
         
-            inline Save(std::tuple<types...>& param) : parameters(param), parameters_name(default_parameters_name) {};
+            inline Save(const std::tuple<types...>& param) : parameters(param), parameters_name(default_parameters_name) {};
         
-            inline Save(types... params) : parameters_name(default_parameters_name){
+            inline Save(const types... params) : parameters_name(default_parameters_name){
                 parameters = std::make_tuple(params...);
             };
         
@@ -70,7 +71,65 @@ namespace akml {
         
             inline std::string printTitleAsCSV() {
                 std::string rtrn ("");
-                for (int i(0); i < parameters_nb; i++){
+                for (std::size_t i(0); i < parameters_nb; i++){
+                    rtrn += parameters_name[i];
+                    if (i != parameters_nb-1)
+                        rtrn += ", ";
+                }
+                return rtrn;
+            }
+    };
+
+    template <unsigned short int parameters_nb, akml::Matrixable MATRIX_INNER_TYPE>
+    class MatrixSave : public AbstractSave {
+        protected:
+            std::array<std::string, parameters_nb> parameters_name;
+            akml::Matrix<MATRIX_INNER_TYPE, parameters_nb, 1> parameters;
+        
+        public:
+            static inline std::array<std::string, parameters_nb> default_parameters_name;
+        
+            inline MatrixSave(const akml::Matrix<MATRIX_INNER_TYPE, parameters_nb, 1>& param) : parameters(param), parameters_name(default_parameters_name) {};
+        
+            template<typename... types>
+            inline MatrixSave(const types... params) : parameters_name(default_parameters_name){
+                parameters = akml::make_vector<MATRIX_INNER_TYPE>(params...);
+            };
+        
+            inline MatrixSave() : parameters_name(default_parameters_name){};
+        
+            inline void setParameterNames(std::array<std::string, parameters_nb> pn){
+                parameters_name = pn;
+            }
+        
+            template <int param_id, typename type>
+            inline void editParameter(type& param_val){
+                parameters[{param_id, 0}] = param_val;
+            }
+        
+            template<typename... types>
+            inline void editParameters(types... params){
+                parameters = std::move(akml::make_vector<MATRIX_INNER_TYPE>(params...));
+            }
+        
+            template <int param_id, typename type>
+            inline type& getParameter(){
+                return parameters[{param_id, 0}];
+            }
+            
+            inline std::string printAsCSV() {
+                std::string rtrn ("");
+                for (std::size_t i(0); i < parameters_nb; i++){
+                    rtrn += std::to_string(parameters[{i, 0}]);
+                    if (i != parameters_nb-1)
+                        rtrn += ", ";
+                }
+                return rtrn;
+            }
+        
+            inline std::string printTitleAsCSV() {
+                std::string rtrn ("");
+                for (std::size_t i(0); i < parameters_nb; i++){
                     rtrn += parameters_name[i];
                     if (i != parameters_nb-1)
                         rtrn += ", ";
@@ -81,4 +140,4 @@ namespace akml {
 
 }
 
-#endif /* Save_hpp */
+#endif /* AKML_Save_hpp */

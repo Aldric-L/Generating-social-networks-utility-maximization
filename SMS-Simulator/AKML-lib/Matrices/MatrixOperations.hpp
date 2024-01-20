@@ -10,27 +10,34 @@
 #include "DynamicMatrix.hpp"
 #include "Matrix.hpp"
 
-#ifndef MatrixOperations_hpp
-#define MatrixOperations_hpp
+#ifndef AKML_MatrixOperations_hpp
+#define AKML_MatrixOperations_hpp
 
 namespace akml {
-    template <typename MATRIX_TYPE, typename element_type>
+    template <akml::MatrixConcept MATRIX_TYPE, akml::Matrixable element_type>
     inline MATRIX_TYPE transform(MATRIX_TYPE matrix, std::function<element_type(element_type, std::size_t, std::size_t)> transfunc){
         matrix.transform(transfunc);
         return matrix;
     }
 
-    template <typename MATRIX_TYPE, typename element_type>
+    template <akml::MatrixConcept MATRIX_TYPE, akml::Matrixable element_type>
     inline MATRIX_TYPE transform(MATRIX_TYPE matrix, std::function<element_type(element_type)> transfunc){
         matrix.transform(transfunc);
         return matrix;
     }
 
     
-    template <typename element_type>
+    template <akml::Matrixable element_type>
     inline DynamicMatrix<element_type> transpose(DynamicMatrix<element_type> old_matrix){
         if (!old_matrix.isInitialized())
             throw std::invalid_argument("Matrix provided is not initialized.");
+        
+        if (old_matrix.getNColumns() == 1 || old_matrix.getNRows() == 1){
+            std::size_t old_rows = old_matrix.getNRows();
+            old_matrix.directSetNRows(old_matrix.getNColumns());
+            old_matrix.directSetNColumns(old_rows);
+            return old_matrix;
+        }
         
         element_type* localdata;
         localdata = new element_type[(old_matrix.getNRows())*(old_matrix.getNColumns())];
@@ -41,20 +48,25 @@ namespace akml {
         }
 
         old_matrix.deleteInternStorage();
-        old_matrix.getStorage() = localdata;
-        old_matrix.getStorageEnd() = localdata+(old_matrix.getNRows())*(old_matrix.getNColumns());
+        
+        old_matrix.setMDataPointer(localdata, (old_matrix.getNRows())*(old_matrix.getNColumns()));
         std::size_t old_rows = old_matrix.getNRows();
         old_matrix.directSetNRows(old_matrix.getNColumns());
         old_matrix.directSetNColumns(old_rows);
         return old_matrix;
     }
 
-    template <typename element_type, std::size_t ROWS, std::size_t COLUMNS>
-    inline Matrix<element_type, COLUMNS, ROWS> transpose(Matrix<element_type, ROWS, COLUMNS>& old_matrix){
+    template <akml::Matrixable element_type, std::size_t ROWS, std::size_t COLUMNS>
+    inline Matrix<element_type, COLUMNS, ROWS> transpose(const Matrix<element_type, ROWS, COLUMNS>& old_matrix){
         if (!old_matrix.isInitialized())
             throw std::invalid_argument("Matrix provided is not initialized.");
         
         Matrix<element_type, COLUMNS, ROWS> newmatrix;
+        if (old_matrix.getNColumns() == 1 || old_matrix.getNRows() == 1){
+            newmatrix.forceByteCopy(old_matrix);
+            return newmatrix;
+        }
+        
         for (std::size_t i=0; i < old_matrix.getNColumns(); i++){
             for (std::size_t j=0; j < old_matrix.getNRows(); j++){
                 *(newmatrix.getStorage()+i*(old_matrix.getNRows())+j) = old_matrix.read(j+1, i+1);
@@ -63,7 +75,7 @@ namespace akml {
         return newmatrix;
     }
 
-    template <typename MATRIX_INNER_TYPE>
+    template <akml::Matrixable MATRIX_INNER_TYPE>
     inline MATRIX_INNER_TYPE inner_product(const akml::MatrixInterface<MATRIX_INNER_TYPE>& a, const akml::MatrixInterface<MATRIX_INNER_TYPE>& b){
         if (!a.isInitialized() || !b.isInitialized())
             throw std::invalid_argument("Matrix provided is not initialized.");
@@ -89,7 +101,7 @@ namespace akml {
         return total;
     }
 
-    template <typename MATRIX_TYPE>
+    template <akml::MatrixConcept MATRIX_TYPE>
     inline MATRIX_TYPE hadamard_product(MATRIX_TYPE A, MATRIX_TYPE B){
         if (!A.isInitialized() || !B.isInitialized())
             throw std::invalid_argument("Matrix provided is not initialized.");
@@ -104,45 +116,71 @@ namespace akml {
         return product;
     };
 
-    template <typename element_type>
+    template <akml::MatrixConcept MATRIX_TYPE>
+    inline MATRIX_TYPE matrix_pow(MATRIX_TYPE A, const unsigned int power){
+        if (!A.isInitialized())
+            throw std::invalid_argument("Matrix provided is not initialized.");
+        if (A.getNColumns() != A.getNRows() )
+            throw std::invalid_argument("Attempting to pow non-squared matrix.");
+        
+        for (std::size_t i=1; i <= power; i++){
+            A = A * A;
+        }
+        return A;
+    };
+
+    template <akml::Matrixable MATRIX_INNER_TYPE>
+    inline MATRIX_INNER_TYPE sum_column(const akml::MatrixInterface<MATRIX_INNER_TYPE>& A, std::size_t col=1){
+        if (!A.isInitialized())
+            throw std::invalid_argument("Matrix provided is not initialized.");
+        if (A.getNColumns() < col)
+            throw std::invalid_argument("Attempting to perform a product on non-equally sized matrix.");
+        MATRIX_INNER_TYPE result(0);
+        for (std::size_t i=1; i <= A.getNRows(); i++){
+            result += A.read(i, col);
+        }
+        return result;
+    };
+
+    template <akml::Matrixable element_type>
     inline DynamicMatrix<element_type> matrix_product(const DynamicMatrix<element_type>& A, const DynamicMatrix<element_type>& B){
         return DynamicMatrix<element_type>::product(A, B);
     };
 
-    template <typename element_type, std::size_t ROWS, std::size_t TEMPDIM, std::size_t COLUMNS>
+    template <akml::Matrixable element_type, std::size_t ROWS, std::size_t TEMPDIM, std::size_t COLUMNS>
     inline StaticMatrix<element_type,ROWS, COLUMNS> matrix_product(const StaticMatrix<element_type, ROWS, TEMPDIM>& A, const StaticMatrix<element_type, TEMPDIM, COLUMNS>& B){
         return StaticMatrix<element_type, ROWS, COLUMNS>::product(A, B);
     };
 
-    template <typename element_type, std::size_t ROWS, std::size_t TEMPDIM, std::size_t COLUMNS>
+    template <akml::Matrixable element_type, std::size_t ROWS, std::size_t TEMPDIM, std::size_t COLUMNS>
     inline Matrix<element_type,ROWS, COLUMNS> matrix_product(const Matrix<element_type, ROWS, TEMPDIM>& A, const Matrix<element_type, TEMPDIM, COLUMNS>& B){
         return Matrix<element_type, ROWS, COLUMNS>::product(A, B);
     };
 
 
-    template <typename element_type>
+    template <akml::Matrixable element_type>
     inline void cout_matrix(const MatrixInterface<element_type>& A){
         return MatrixInterface<element_type>::cout(A);
         
     };
 
-    template <typename element_type>
+    template <akml::Arithmetic element_type>
     inline element_type abs(element_type& val){ return std::abs(val); }
 
     template<>
     inline std::size_t abs(std::size_t& val){ return val; }
 
-    template <typename element_type>
+    template <akml::Arithmetic element_type>
     inline std::size_t arg_max(const element_type* begin, const element_type* end) {
         return static_cast<std::size_t>(std::distance(begin, std::max_element(begin, end)));
     }
 
-    template <typename element_type>
+    template <akml::Arithmetic element_type>
     inline std::size_t arg_min(const element_type* begin, const element_type* end) {
         return static_cast<std::size_t>(std::distance(begin, std::min_element(begin, end)));
     }
 
-    template <typename element_type>
+    template <akml::Arithmetic element_type>
     inline std::size_t arg_max(const MatrixInterface<element_type>& matrix, const bool absval_mode=false) {
         if (!matrix.isInitialized())
             throw std::invalid_argument("Matrix provided is not initialized.");
@@ -162,7 +200,7 @@ namespace akml {
         return arg_max(matrix.getStorage(), matrix.getStorageEnd());
     }
 
-    template <typename element_type>
+    template <akml::Arithmetic element_type>
     inline std::size_t arg_min(const MatrixInterface<element_type>& matrix, const bool absval_mode=false) {
         if (!matrix.isInitialized())
             throw std::invalid_argument("Matrix provided is not initialized.");
@@ -183,17 +221,17 @@ namespace akml {
         return arg_min(matrix.getStorage(), matrix.getStorageEnd());
     }
 
-    template <typename element_type>
+    template <akml::Arithmetic element_type>
     inline element_type max(const element_type* begin, const element_type* end) {
         return *std::max_element(begin, end);
     }
 
-    template <typename element_type>
+    template <akml::Arithmetic element_type>
     inline element_type min(const element_type* begin, const element_type* end) {
         return *std::min_element(begin, end);
     }
 
-    template <typename element_type>
+    template <akml::Arithmetic element_type>
     inline element_type max(const MatrixInterface<element_type>& matrix) {
         if (!matrix.isInitialized())
             throw std::invalid_argument("Matrix provided is not initialized.");
@@ -204,7 +242,7 @@ namespace akml {
         return max(matrix.getStorage(), matrix.getStorageEnd());
     }
 
-    template <typename element_type>
+    template <akml::Arithmetic element_type>
     inline element_type min(const MatrixInterface<element_type>& matrix, const bool absval_mode=false) {
         if (!matrix.isInitialized())
             throw std::invalid_argument("Matrix provided is not initialized.");
@@ -215,7 +253,7 @@ namespace akml {
         return min(matrix.getStorage(), matrix.getStorageEnd());
     }
 
-    template <typename element_type>
+    template <akml::Arithmetic element_type>
     inline float mean(const MatrixInterface<element_type>& matrix, const bool absval_mode=false, const element_type ignore=static_cast<element_type>(1)) {
         if (!matrix.isInitialized())
             throw std::invalid_argument("Matrix provided is not initialized.");
@@ -234,7 +272,7 @@ namespace akml {
         return mean;
     }
 
-    template <typename element_type>
+    template <akml::Arithmetic element_type>
     inline float stat_var(const MatrixInterface<element_type>& matrix, const element_type ignore=static_cast<element_type>(1),  float mean=0) {
         if (!matrix.isInitialized())
             throw std::invalid_argument("Matrix provided is not initialized.");
@@ -264,7 +302,7 @@ namespace akml {
      * Please use the dijkstra_distance_algorithm who does all the verifications for you
      * Freely adjusted from an article of geeksforgeeks.org
      */
-    template <typename element_type>
+    template <akml::Arithmetic element_type>
     inline void __localComputeDijkstra(const MatrixInterface<element_type>& matrix, const std::size_t& from, MatrixInterface<std::size_t>* dist){
         akml::DynamicMatrix<element_type> shortestPathTreeSet(matrix.getNColumns(), 1);
      
@@ -299,7 +337,7 @@ namespace akml {
     /*
      * dijkstra_distance_algorithm - Method to find the length of the shortest path between two vertices
      */
-    template <typename element_type, std::size_t MATRIX_DIM>
+    template <akml::Arithmetic element_type, std::size_t MATRIX_DIM>
     inline akml::Matrix<std::size_t, MATRIX_DIM, 1> dijkstra_distance_algorithm(const Matrix<element_type, MATRIX_DIM, MATRIX_DIM>& matrix, const std::size_t from) {
         if (!matrix.isInitialized())
             throw std::invalid_argument("Matrix provided is not initialized.");
@@ -312,7 +350,7 @@ namespace akml {
         return dist;
     }
 
-    template <typename element_type>
+    template <akml::Arithmetic element_type>
     inline akml::DynamicMatrix<std::size_t> dijkstra_distance_algorithm(const DynamicMatrix<element_type>& matrix, const std::size_t from) {
         if (!matrix.isInitialized())
             throw std::invalid_argument("Matrix provided is not initialized.");
@@ -325,7 +363,7 @@ namespace akml {
         return dist;
     }
 
-    template <typename element_type, std::size_t MATRIX_DIM>
+    template <akml::Arithmetic element_type, std::size_t MATRIX_DIM>
     inline akml::StaticMatrix<std::size_t, MATRIX_DIM, 1> dijkstra_distance_algorithm(const StaticMatrix<element_type, MATRIX_DIM, MATRIX_DIM>& matrix, const std::size_t from) {
         if (!matrix.isInitialized())
             throw std::invalid_argument("Matrix provided is not initialized.");
@@ -337,6 +375,18 @@ namespace akml {
         __localComputeDijkstra(matrix, from, &dist);
         return dist;
     }
+    
+    template<akml::Matrixable MATRIX_INNER_TYPE, akml::Matrixable... MATRIX_INNER_TYPES> requires (std::same_as<MATRIX_INNER_TYPE, MATRIX_INNER_TYPES> && ...)
+    inline akml::Matrix<MATRIX_INNER_TYPE, sizeof...(MATRIX_INNER_TYPES), 1> make_vector(const MATRIX_INNER_TYPES... elements) {
+        
+        akml::Matrix<MATRIX_INNER_TYPE, sizeof...(MATRIX_INNER_TYPES), 1> newmat((std::array<std::array<MATRIX_INNER_TYPE, 1>, sizeof...(MATRIX_INNER_TYPES)>){{ {elements}... }});
+        return newmat;
+    }
 
+    template<akml::Matrixable MATRIX_INNER_TYPE, akml::Matrixable... MATRIX_INNER_TYPES> requires (std::same_as<MATRIX_INNER_TYPE, MATRIX_INNER_TYPES> && ...)
+    inline DynamicMatrix<MATRIX_INNER_TYPE> make_dynamic_vector(const MATRIX_INNER_TYPES... elements) {
+        akml::DynamicMatrix<MATRIX_INNER_TYPE> newmat((std::array<std::array<MATRIX_INNER_TYPE, 1>, sizeof...(MATRIX_INNER_TYPES)>){{ {elements}... }});
+        return newmat;
+    }
 }
 #endif /* MatrixOperations_h */

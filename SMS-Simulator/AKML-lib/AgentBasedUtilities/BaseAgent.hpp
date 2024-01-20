@@ -5,8 +5,8 @@
 //  Created by Aldric Labarthe on 05/11/2023.
 //
 
-#ifndef BaseAgent_hpp
-#define BaseAgent_hpp
+#ifndef AKML_BaseAgent_hpp
+#define AKML_BaseAgent_hpp
 
 #include <stdio.h>
 

@@ -1,10 +1,11 @@
 //
 //  Matrices.hpp
-//  XORNeural network
+//  AKML Project
 //
 //  Created by Aldric Labarthe on 17/12/2023.
 //
 
+#include <iostream>
 #include <exception>
 #include <stdexcept>
 #include <functional>
@@ -13,6 +14,9 @@
 #include <random>
 #include <vector>
 #include <limits>
+#include <cstddef>
+#include <concepts>
+#include <type_traits>
 
 #include "Matrices/MatrixInterface.hpp"
 #include "Matrices/StaticMatrix.hpp"

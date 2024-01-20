@@ -35,26 +35,34 @@ SexualMarket::SexualMarket(){
 }
 
 SexualMarket::~SexualMarket(){
-    SexualMarket::VerticesSaveTrackerType* save;
-    akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> binaryadjacencymatrix = SexualMarket::asBinaryAdjacencyMatrix();
-    akml::Matrix<std::size_t, GRAPH_SIZE, 1> dijkstra_distance_mat;
-    for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
-        std::string p = "";
-        for (std::size_t i(0); i < P_DIMENSION; i++){
-            p.push_back( char( individuals[{indiv,0}]->getP()(i+1, 1) + 48) );
-        }
-        dijkstra_distance_mat = akml::dijkstra_distance_algorithm(binaryadjacencymatrix, indiv);
-        //std::cout << "\n Indiv " << indiv << " mean= " << akml::mean(dijkstra_distance_mat, false, ULONG_MAX) << "\n";
-        //std::cout << dijkstra_distance_mat;
-        save = new SexualMarket::VerticesSaveTrackerType(SexualMarket::currentRound, individuals[{indiv,0}]->agentid, individuals[{indiv,0}]->gamma, individuals[{indiv,0}]->is_greedy, akml::mean(dijkstra_distance_mat, false, ULONG_MAX), akml::stat_var(dijkstra_distance_mat, ULONG_MAX), akml::max(dijkstra_distance_mat), p);
-        verticesTrackersManager.addSave(save);
-    }
     if (SexualMarket::SHOULD_I_LOG){
+        SexualMarket::VerticesSaveTrackerType* save;
+        akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> binaryadjacencymatrix = SexualMarket::asBinaryAdjacencyMatrix();
+        akml::Matrix<std::size_t, GRAPH_SIZE, 1> dijkstra_distance_mat;
+        for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
+            std::string p = "";
+            for (std::size_t i(0); i < P_DIMENSION; i++){
+                p.push_back( char( individuals[{indiv,0}]->getP()(i+1, 1) + 48) );
+            }
+            dijkstra_distance_mat = akml::dijkstra_distance_algorithm(binaryadjacencymatrix, indiv);
+            //std::cout << "\n Indiv " << indiv << " mean= " << akml::mean(dijkstra_distance_mat, false, ULONG_MAX) << "\n";
+            //std::cout << dijkstra_distance_mat;
+            save = new SexualMarket::VerticesSaveTrackerType(SexualMarket::currentRound, individuals[{indiv,0}]->agentid, individuals[{indiv,0}]->gamma, individuals[{indiv,0}]->is_greedy, akml::mean(dijkstra_distance_mat, false, ULONG_MAX), akml::stat_var(dijkstra_distance_mat, ULONG_MAX), akml::max(dijkstra_distance_mat), p);
+            verticesTrackersManager.addSave(save);
+        }
+        
+        #if COMPUTE_CLUSTERING
+        SexualMarket::ClusteringSaveTrackerType* clsave;
+        clsave = new SexualMarket::ClusteringSaveTrackerType(std::move(SexualMarket::computeClusteringCoefficients(&binaryadjacencymatrix)));
+        SexualMarket::clusteringTrackersManager.addSave(clsave);
+        #endif
         long int t = static_cast<long int> (std::clock());
         std::string curt = std::to_string(t);
         SexualMarket::edgeTrackersManager.saveToCSV("SMS-Save-Edges-" + curt + ".csv", false);
         SexualMarket::utilityTrackersManager.saveToCSV("SMS-Save-Utility-" + curt + ".csv", false);
         SexualMarket::verticesTrackersManager.saveToCSV("SMS-Save-Vertices-"  + curt + ".csv", false);
+        SexualMarket::clusteringTrackersManager.saveToCSV("SMS-Save-Clustering-" + curt + ".csv", false);
+        
     }
     for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
         delete individuals[{indiv,0}];
@@ -82,17 +90,25 @@ void SexualMarket::initializeLinks(){
             link_i++;
         }
     }
-    SexualMarket::VerticesSaveTrackerType* vertice_save;
-    akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> binaryadjacencymatrix = SexualMarket::asBinaryAdjacencyMatrix();
-    akml::Matrix<std::size_t, GRAPH_SIZE, 1> dijkstra_distance_mat;
-    for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
-        std::string p = "";
-        for (int i(0); i < P_DIMENSION; i++){
-            p.push_back( char( individuals[{indiv,0}]->getP()(i+1, 1) + 48) );
+    if (SexualMarket::SHOULD_I_LOG){
+        SexualMarket::VerticesSaveTrackerType* vertice_save;
+        akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> binaryadjacencymatrix = SexualMarket::asBinaryAdjacencyMatrix();
+        akml::Matrix<std::size_t, GRAPH_SIZE, 1> dijkstra_distance_mat;
+        for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
+            std::string p = "";
+            for (int i(0); i < P_DIMENSION; i++){
+                p.push_back( char( individuals[{indiv,0}]->getP()(i+1, 1) + 48) );
+            }
+            dijkstra_distance_mat = akml::dijkstra_distance_algorithm(binaryadjacencymatrix, indiv);
+            vertice_save = new SexualMarket::VerticesSaveTrackerType(SexualMarket::currentRound, individuals[{indiv,0}]->agentid, individuals[{indiv,0}]->gamma, individuals[{indiv,0}]->is_greedy, akml::mean(dijkstra_distance_mat, false, ULONG_MAX), akml::stat_var(dijkstra_distance_mat, ULONG_MAX), akml::max(dijkstra_distance_mat), p);
+            verticesTrackersManager.addSave(vertice_save);
+            
         }
-        dijkstra_distance_mat = akml::dijkstra_distance_algorithm(binaryadjacencymatrix, indiv);
-        vertice_save = new SexualMarket::VerticesSaveTrackerType(SexualMarket::currentRound, individuals[{indiv,0}]->agentid, individuals[{indiv,0}]->gamma, individuals[{indiv,0}]->is_greedy, akml::mean(dijkstra_distance_mat, false, ULONG_MAX), akml::stat_var(dijkstra_distance_mat, ULONG_MAX), akml::max(dijkstra_distance_mat), p);
-        verticesTrackersManager.addSave(vertice_save);
+        #if COMPUTE_CLUSTERING
+        SexualMarket::ClusteringSaveTrackerType* clsave;
+        clsave = new SexualMarket::ClusteringSaveTrackerType(std::move(SexualMarket::computeClusteringCoefficients(&binaryadjacencymatrix)));
+        clusteringTrackersManager.addSave(clsave);
+        #endif
     }
     SexualMarket::currentRound = 1;
     #if GRAPH_SIZE >= 100
@@ -221,7 +237,7 @@ unsigned int SexualMarket::processARound(std::size_t totalrounds) {
         }else if (totalrounds != 0 && totalrounds > 100 && SexualMarket::currentRound % (totalrounds/100) == 0){
             std::cout << "\nThread " << std::this_thread::get_id() << " - Status: " << SexualMarket::currentRound*100/totalrounds << "% completed";
         }
-    #elif
+    #else
         for (std::size_t i(0); i < GRAPH_SIZE; i++){
             SexualMarket::UtilitySaveTrackerType save (SexualMarket::currentRound, SexualMarket::getIndividual(i)->agentid, SexualMarket::getIndividual(i)->computeUtility(nullptr));
             SexualMarket::utilityTrackersManager.addSave(save);
@@ -278,5 +294,55 @@ akml::Matrix<std::size_t, GRAPH_SIZE, GRAPH_SIZE> SexualMarket::computeDegreesOf
         delete binaryadjacencymatrix;
     
     akml::Matrix<std::size_t, GRAPH_SIZE, GRAPH_SIZE> result(preresult);
+    return result;
+}
+
+akml::Matrix<float, GRAPH_SIZE+1, 1> SexualMarket::computeClusteringCoefficients(akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE>* binaryadjacencymatrix){
+    bool bam_td = false;
+    if (binaryadjacencymatrix == nullptr){
+        binaryadjacencymatrix = new akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE>;
+        *binaryadjacencymatrix = SexualMarket::asBinaryAdjacencyMatrix();
+        bam_td = true;
+    }
+    akml::Matrix<float, GRAPH_SIZE+1, 1> result;
+    std::size_t pairs(0), possiblepairs(0), global_closed_triples, global_dim_scopes;
+    for (std::size_t node_id(0); node_id < GRAPH_SIZE; node_id++){
+        std::size_t dimscope(0);
+        for (std::size_t node_target_id(0); node_target_id < GRAPH_SIZE; node_target_id++){
+            if (node_id != node_target_id && (*binaryadjacencymatrix)[{node_id, node_target_id}] == 1)
+                dimscope++;
+            if (node_id != node_target_id && (*binaryadjacencymatrix)[{node_id, node_target_id}] == 1){
+                for (std::size_t node_target2_id(0); node_target2_id < GRAPH_SIZE; node_target2_id++){
+                    if (node_target2_id != node_id && node_target2_id != node_target_id
+                        && (*binaryadjacencymatrix)[{node_id, node_target2_id}] == 1){
+                        if ((*binaryadjacencymatrix)[{node_target_id, node_target2_id}] == 1){
+                            global_closed_triples++;
+                            pairs++;
+                        }
+                        possiblepairs++;
+                    }
+                }
+            }
+        }
+        
+        if (pairs > 0 && possiblepairs >0 && GRAPH_SIZE > 1){
+            result[{node_id, 0}] = ((float)pairs) / ((float)possiblepairs);
+        }else {
+            result[{node_id, 0}] = 0;
+        }
+        pairs = 0;
+        possiblepairs = 0;
+        global_dim_scopes += dimscope;
+    }
+    
+    if (global_closed_triples > 0 && global_dim_scopes >0){
+        result[{GRAPH_SIZE, 0}] = (float)global_closed_triples / ((float)global_dim_scopes * ((float)global_dim_scopes-1));
+    }else {
+        result[{GRAPH_SIZE, 0}] = 0;
+    }
+
+    if (bam_td)
+        delete binaryadjacencymatrix;
+    
     return result;
 }

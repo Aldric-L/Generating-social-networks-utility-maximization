@@ -1,17 +1,26 @@
 //
 //  MatrixInterface.hpp
-//  XORNeural network
+//  AKML Project
 //
 //  Created by Aldric Labarthe on 17/12/2023.
 //
 
-#ifndef MatrixInterface_hpp
-#define MatrixInterface_hpp
+#ifndef AKML_MatrixInterface_hpp
+#define AKML_MatrixInterface_hpp
 
 namespace akml {
 
+// Matrixable concept accepts pointers only for compatibility reasons, it will in future updates be an alias of Arithmetic. Matrices should not contain pointers. It's a bad idea.
 template <typename element_type>
-class MatrixInterface {
+concept Matrixable = std::is_arithmetic<element_type>::value || std::is_pointer<element_type>::value;
+
+template <typename element_type>
+concept Arithmetic = std::is_arithmetic<element_type>::value;
+
+class AbstractMatrix {};
+
+template <akml::Matrixable element_type>
+class MatrixInterface : public AbstractMatrix{
 protected:
     element_type* m_data = nullptr;
     element_type* m_data_end = nullptr;
@@ -34,8 +43,9 @@ public:
     inline std::size_t getNRows() const { return this->rows; }
     
     inline bool isInitialized() const { return !(this->m_data==nullptr); }
-    inline element_type*& getStorage() { return this->m_data; }
-    inline element_type*& getStorageEnd() { return this->m_data_end; }
+    // FORBIDDEN NOW
+    //inline element_type*& getStorage() { return this->m_data; }
+    //inline element_type*& getStorageEnd() { return this->m_data_end; }
     inline element_type* getStorage() const { return this->m_data; }
     inline element_type* getStorageEnd() const { return this->m_data_end; }
     inline element_type* getInternElement(const std::size_t pos) const {
@@ -45,19 +55,23 @@ public:
         return (this->m_data + pos);
     }
     
-    inline void setMDataPointer(element_type* array_start){
+    inline void setMDataPointer(element_type* array_start, std::size_t sizeof_container=0){
         this->m_data = array_start;
-        this->m_data_end = this->m_data + (this->rows)*(this->columns);
+        this->m_data_end = this->m_data + ((sizeof_container == 0 && array_start != nullptr) ? (this->rows)*(this->columns) : sizeof_container);
     }
     
     inline element_type& operator[](const std::array<std::size_t, 2> row_and_col) const {
+        if (!this->isInitialized())
+            throw std::invalid_argument("Matrix provided is not initialized.");
         if (this->rows <= row_and_col[0] || this->columns <= row_and_col[1])
             throw std::invalid_argument("Attempt to access to an out of reach element of a matrix");
         return *(this->m_data + row_and_col[0]*(this->columns)+row_and_col[1]);
     }
     
     inline element_type read(const size_t row, const size_t column) const {
-        if (this->rows < row || this->columns < column)
+        if (!this->isInitialized())
+            throw std::invalid_argument("Matrix provided is not initialized.");
+        if (this->getNRows() < row || this->getNColumns() < column)
             throw std::invalid_argument("Attempt to access to an out of reach element of a matrix");
         return *(this->m_data + (row-1)*(this->columns)+(column-1));
     }
@@ -69,6 +83,8 @@ public:
     inline element_type read(const std::array<std::size_t, 2> row_and_col) const { return operator[]({row_and_col[0]-1, row_and_col[1]-1}); }
     
     inline element_type& operator()(const size_t row, const size_t column) { return operator[]({row-1, column-1}); }
+    
+    inline bool is_squared(){ return (this->getNColumns() == this->getNRows()); }
     
     inline void transform(std::function<element_type(element_type, std::size_t, std::size_t)> transfunc){
         for (std::size_t i(0); i < (this->rows); i++){
@@ -94,7 +110,7 @@ public:
             for (std::size_t j(0); j<matrix.getNColumns(); j++){
                 std::cout << matrix.read(i+1,j+1) << " ";
                 if (j != matrix.getNColumns()-1)
-                    std::cout << "; ";
+                    std::cout << ", ";
             }
             if (i != matrix.getNRows()-1)
                 std::cout << "]," << std::endl;
@@ -118,6 +134,18 @@ public:
         return true;
     }
 };
+
+class FSMatrixInterface {};
+
+template <class T>
+concept MatrixConcept = std::is_base_of<AbstractMatrix, T>::value;
+
+template <class T>
+concept FixedSizeMatrixConcept = std::is_base_of<FSMatrixInterface, T>::value;
+
+template <class T, typename MATRIX_INNER_TYPE>
+concept MatrixInterfaceConcept = std::is_base_of<MatrixInterface<MATRIX_INNER_TYPE>, T>::value;
+
 
 };
 

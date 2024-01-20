@@ -1,12 +1,12 @@
 //
 //  Matrix.hpp
-//  XORNeural network
+//  AKML Project
 //
 //  Created by Aldric Labarthe on 17/12/2023.
 //
 
-#ifndef Matrix_hpp
-#define Matrix_hpp
+#ifndef AKML_Matrix_hpp
+#define AKML_Matrix_hpp
 
 #include "MatrixInterface.hpp"
 #include "DynamicMatrix.hpp"
@@ -14,11 +14,13 @@
 namespace akml {
 
 template <typename element_type, std::size_t ROWS, std::size_t COLUMNS>
-class Matrix : public DynamicMatrix<element_type>{
+class Matrix : public DynamicMatrix<element_type>, public FSMatrixInterface{
 public:
     inline void setNColumns(std::size_t& c) = delete;
     inline void setNRows(std::size_t& r) = delete;
     inline void resize(std::size_t r, std::size_t c) = delete;
+    inline void directSetNColumns(std::size_t c) = delete;
+    inline void directSetNRows(std::size_t r) = delete;
     
     inline Matrix(const bool fromscratch=false) : DynamicMatrix<element_type>(ROWS, COLUMNS, fromscratch) {};
     
@@ -32,13 +34,15 @@ public:
                 *(this->m_data + line*(this->columns)+col) = cols[col].read(line+1, 1);
             }
         }
-        
-        //std::cout << "A matrix is born " << this << " - Mdata ref " << m_data << std::endl;
     }
     
     inline Matrix(const std::array <std::array <element_type, COLUMNS>, ROWS>& data) : DynamicMatrix<element_type>(data) {}
     
-    //copy constructor
+    inline Matrix(std::function<element_type(element_type, std::size_t, std::size_t)>& transfunc) : DynamicMatrix<element_type>(ROWS, COLUMNS, transfunc) {}
+    
+    inline Matrix(std::function<element_type(element_type)>& transfunc) : DynamicMatrix<element_type>(ROWS, COLUMNS, transfunc) {}
+ 
+    //copy constructors
     inline Matrix(const Matrix<element_type, ROWS, COLUMNS>& other) : DynamicMatrix<element_type>(ROWS, COLUMNS, true) {
         if (other.getNColumns() != COLUMNS || other.getNRows() != ROWS)
             throw std::invalid_argument("Matrix should be equally sized to be assignable.");
@@ -46,17 +50,30 @@ public:
         std::copy(other.getStorage(), other.getStorageEnd(), this->m_data);
     }
     
-    inline Matrix(std::function<element_type(element_type, std::size_t, std::size_t)>& transfunc) : DynamicMatrix<element_type>(ROWS, COLUMNS, transfunc) {}
-    
-    inline Matrix(std::function<element_type(element_type)>& transfunc) : DynamicMatrix<element_type>(ROWS, COLUMNS, transfunc) {}
- 
-    inline Matrix(Matrix<element_type, ROWS, COLUMNS>&& other) : DynamicMatrix<element_type>(ROWS, COLUMNS) {
+    template <akml::MatrixInterfaceConcept<element_type> MatrixC>
+    inline Matrix(const MatrixC& other) : DynamicMatrix<element_type>(ROWS, COLUMNS, true) {
         if (other.getNColumns() != COLUMNS || other.getNRows() != ROWS)
             throw std::invalid_argument("Matrix should be equally sized to be assignable.");
         
-        //this->m_data = other.getStorage();
+        std::copy(other.getStorage(), other.getStorageEnd(), this->m_data);
+    }
+    
+    inline Matrix(Matrix<element_type, ROWS, COLUMNS>&& other) : DynamicMatrix<element_type>(ROWS, COLUMNS) {
         this->setMDataPointer(other.getStorage());
-        other.getStorage() = nullptr;
+        other.setMDataPointer(nullptr);
+    }
+    
+    
+    template <akml::MatrixInterfaceConcept<element_type> MatrixC>
+    inline Matrix<element_type, ROWS, COLUMNS>& operator=(const MatrixC& other){
+        if (!this->isInitialized())
+            this->createInternStorage();
+        if (other.getNColumns() != COLUMNS || other.getNRows() != ROWS)
+            throw std::invalid_argument("Matrix should be equally sized to be assignable.");
+        
+        if (other.isInitialized())
+            std::copy(other.getStorage(), other.getStorageEnd(), this->m_data);
+        return *this;
     }
     
     inline Matrix<element_type, ROWS, COLUMNS>& operator=(const Matrix<element_type, ROWS, COLUMNS>& other){
@@ -68,8 +85,9 @@ public:
         return *this;
     }
     
-    inline Matrix<element_type, ROWS, COLUMNS>& operator=(const DynamicMatrix<element_type>& other){
-        DynamicMatrix<element_type>::operator=(other);
+    inline Matrix<element_type, ROWS, COLUMNS>& operator=(Matrix<element_type, ROWS, COLUMNS>&& other) {
+        this->setMDataPointer(other.getStorage());
+        other.setMDataPointer(nullptr);
         return *this;
     }
      
@@ -80,7 +98,8 @@ public:
         return DynamicMatrix<element_type>::cout(matrix);
     }
     
-    inline Matrix<element_type, ROWS, COLUMNS>& operator+=(const Matrix<element_type, ROWS, COLUMNS>& mat){
+    template <akml::MatrixInterfaceConcept<element_type> MatrixC>
+    inline Matrix<element_type, ROWS, COLUMNS>& operator+=(const MatrixC& mat){
         if (!mat.isInitialized())
             throw std::invalid_argument("Matrix provided is not initialized.");
         
@@ -94,17 +113,19 @@ public:
         return *this;
     }
     
-    inline friend Matrix<element_type, ROWS, COLUMNS> operator+(Matrix<element_type, ROWS, COLUMNS> selfmat, const Matrix<element_type, ROWS, COLUMNS>& mat){
+    template <akml::MatrixInterfaceConcept<element_type> MatrixC>
+    inline friend Matrix<element_type, ROWS, COLUMNS> operator+(Matrix<element_type, ROWS, COLUMNS> selfmat, const MatrixC& mat){
         selfmat += mat;
         return selfmat;
     }
     
-    inline friend Matrix<element_type, ROWS, COLUMNS> operator*(Matrix<element_type, ROWS, COLUMNS> selfmat, const Matrix<element_type, ROWS, COLUMNS>& mat){
+    template <akml::MatrixInterfaceConcept<element_type> MatrixC>
+    inline friend Matrix<element_type, ROWS, COLUMNS> operator*(Matrix<element_type, ROWS, COLUMNS> selfmat, const MatrixC& mat){
         selfmat *= mat;
         return selfmat;
     }
     
-    template <typename NumericType>
+    template <akml::Arithmetic NumericType>
     inline friend Matrix<element_type, ROWS, COLUMNS> operator*(Matrix<element_type, ROWS, COLUMNS> selfmat, const NumericType& num){
         static_assert(std::is_arithmetic<NumericType>::value, "NumericType must be numeric");
         if (selfmat.getNColumns() != COLUMNS || selfmat.getNRows() != ROWS)
@@ -115,12 +136,13 @@ public:
         return selfmat;
     }
     
-    template <typename NumericType>
-    inline friend Matrix<element_type, ROWS, COLUMNS> operator*(const NumericType& num, Matrix<element_type, ROWS, COLUMNS> selfmat){
+    template <akml::Arithmetic NumericType, akml::MatrixInterfaceConcept<element_type> MatrixC>
+    inline friend Matrix<element_type, ROWS, COLUMNS> operator*(const NumericType& num, MatrixC selfmat){
         return operator*(selfmat, num);
     }
     
-    inline Matrix<element_type, ROWS, COLUMNS>& operator*=(const Matrix<element_type, ROWS, COLUMNS>& mat){
+    template <akml::MatrixInterfaceConcept<element_type> MatrixC>
+    inline Matrix<element_type, ROWS, COLUMNS>& operator*=(const MatrixC& mat){
         if (!mat.isInitialized())
             throw std::invalid_argument("Matrix provided is not initialized.");
         
@@ -131,7 +153,8 @@ public:
         return *this;
     }
     
-    inline Matrix<element_type, ROWS, COLUMNS>& operator-=(const Matrix<element_type, ROWS, COLUMNS>& mat){
+    template <akml::MatrixInterfaceConcept<element_type> MatrixC>
+    inline Matrix<element_type, ROWS, COLUMNS>& operator-=(const MatrixC& mat){
         if (!mat.isInitialized())
             throw std::invalid_argument("Matrix provided is not initialized.");
 
@@ -142,7 +165,8 @@ public:
         return *this;
     }
     
-    inline friend Matrix<element_type, ROWS, COLUMNS> operator-(Matrix<element_type, ROWS, COLUMNS> selfmat, const Matrix<element_type, ROWS, COLUMNS>& mat){
+    template <akml::MatrixInterfaceConcept<element_type> MatrixC>
+    inline friend Matrix<element_type, ROWS, COLUMNS> operator-(Matrix<element_type, ROWS, COLUMNS> selfmat, const MatrixC& mat){
         selfmat -= mat;
         return selfmat;
     }
@@ -166,6 +190,11 @@ public:
         return product;
         
     };
+    
+    inline void transpose(bool force_transpose=false){
+        // No fixed-size matrix should be able to force-transpose like a dynamic matrix
+        DynamicMatrix<element_type>::transpose(false);
+    }
 };
 
 };

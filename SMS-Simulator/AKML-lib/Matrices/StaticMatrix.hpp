@@ -1,19 +1,19 @@
 //
 //  StaticMatrix.hpp
-//  XORNeural network
+//  AKML Project
 //
 //  Created by Aldric Labarthe on 17/12/2023.
 //
 
 #include "MatrixInterface.hpp"
 
-#ifndef StaticMatrix_hpp
-#define StaticMatrix_hpp
+#ifndef AKML_StaticMatrix_hpp
+#define AKML_StaticMatrix_hpp
 
 namespace akml {
 
 template <typename element_type, std::size_t ROWS, std::size_t COLUMNS>
-class StaticMatrix : public MatrixInterface<element_type>{
+class StaticMatrix : public MatrixInterface<element_type>, public FSMatrixInterface{
 protected:
     element_type m_data_static_array[ROWS*COLUMNS];
     
@@ -36,7 +36,6 @@ public:
     
     inline StaticMatrix(const bool fromscratch=false) : MatrixInterface<element_type>(ROWS, COLUMNS) {
         (fromscratch) ? this->createInternStorage() : this->create();
-        //std::cout << "A matrix is born " << this << " - Mdata ref " << m_data << std::endl;
     }
     
     //Column-based constructor
@@ -50,8 +49,6 @@ public:
                 *(this->m_data + line*(this->columns)+col) = cols[col].read(line+1, 1);
             }
         }
-        
-        //std::cout << "A matrix is born " << this << " - Mdata ref " << m_data << std::endl;
     }
     
     inline StaticMatrix(const std::array <std::array <element_type, COLUMNS>, ROWS>& data) : MatrixInterface<element_type>(ROWS, COLUMNS) {
@@ -61,27 +58,30 @@ public:
                 *(this->m_data + line*COLUMNS+col) = data[line][col];
             }
         }
-        //std::cout << "A matrix is born " << this << " - Mdata ref " << m_data << std::endl;
     }
     
     //copy constructor
     inline StaticMatrix(const StaticMatrix<element_type, ROWS, COLUMNS>& other) : MatrixInterface<element_type>(ROWS, COLUMNS) {
-        //deleteInternStorage();
         this->createInternStorage();
         std::copy(other.getStorage(), other.getStorageEnd(), this->m_data);
-        //std::cout << "A matrix is born " << this << " - Mdata ref " << m_data << std::endl;
+    }
+    
+    template <akml::MatrixInterfaceConcept<element_type> MatrixC>
+    inline StaticMatrix(const MatrixC& other) : MatrixInterface<element_type>(ROWS, COLUMNS) {
+        if (other.getNRows() != ROWS || other.getNColumns() != COLUMNS)
+            throw std::invalid_argument("Error with matrix dimension.");
+        this->createInternStorage();
+        std::copy(other.getStorage(), other.getStorageEnd(), this->m_data);
     }
     
     inline StaticMatrix(std::function<element_type(element_type, std::size_t, std::size_t)>& transfunc) : MatrixInterface<element_type>(ROWS, COLUMNS) {
         this->create();
         this->transform(transfunc);
-        //std::cout << "A matrix is born " << this << " - Mdata ref " << m_data << std::endl;
     }
     
     inline StaticMatrix(std::function<element_type(element_type)>& transfunc) : MatrixInterface<element_type>(ROWS, COLUMNS) {
         this->create();
         this->transform(transfunc);
-        //std::cout << "A matrix is born " << this << " - Mdata ref " << m_data << std::endl;
     }
     
     inline StaticMatrix<element_type, ROWS, COLUMNS>& operator=(StaticMatrix<element_type,ROWS, COLUMNS>&& other){
@@ -130,7 +130,7 @@ public:
         return selfmat;
     }
     
-    template <typename NumericType>
+    template <akml::Arithmetic NumericType>
     inline friend StaticMatrix<element_type, ROWS, COLUMNS> operator*(StaticMatrix<element_type, ROWS, COLUMNS> selfmat, const NumericType& num){
         static_assert(std::is_arithmetic<NumericType>::value, "NumericType must be numeric");
         for (element_type* tar(selfmat.getStorage()); tar < selfmat.getStorageEnd(); tar++){
@@ -139,7 +139,7 @@ public:
         return selfmat;
     }
     
-    template <typename NumericType>
+    template <akml::Arithmetic NumericType>
     inline friend StaticMatrix<element_type, ROWS, COLUMNS> operator*(const NumericType& num, StaticMatrix<element_type, ROWS, COLUMNS> selfmat){
         return operator*(selfmat, num);
 

@@ -5,8 +5,8 @@
 //  Created by Aldric Labarthe on 05/11/2023.
 //
 
-#ifndef CSV_Saver_hpp
-#define CSV_Saver_hpp
+#ifndef AKML_CSV_Saver_hpp
+#define AKML_CSV_Saver_hpp
 
 #include <stdio.h>
 #include <vector>
@@ -17,7 +17,10 @@
 
 namespace akml {
 
-    template <class SaveClass>
+    template <class T>
+    concept SaveClassConcept = std::is_base_of<akml::AbstractSave, T>::value;
+
+    template <SaveClassConcept SaveClass>
     class CSV_Saver {
     protected:
         std::vector<std::pair<std::size_t, SaveClass*>> memory;

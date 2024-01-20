@@ -23,14 +23,14 @@ protected:
     const std::string customOriginField;
     std::array<AbstractNeuralLayer*, NBLAYERS> layers;
     
-    template<int i, int j>
+    template<std::size_t i, std::size_t j>
     struct setLayer_functor {
         static void run(akml::NeuralNetwork<NBLAYERS>& neuralnet, std::function<float(float)>& activation_func) {
             neuralnet.setLayer<akml::NN_STRUCTURE[j], akml::NN_STRUCTURE[i]>(i+2, activation_func);
         }
     };
     
-    template<int i, int j>
+    template<std::size_t i, std::size_t j>
     struct exportLayer_functor {
         static void run(std::array<AbstractNeuralLayer*, NBLAYERS>* layers, std::string* file_content) {
             NeuralLayer<akml::NN_STRUCTURE[j], akml::NN_STRUCTURE[i]>* layer = (NeuralLayer<akml::NN_STRUCTURE[j], akml::NN_STRUCTURE[i]>*) (*layers)[i+1];
@@ -38,7 +38,7 @@ protected:
         }
     };
     
-    template<int i, int j>
+    template<std::size_t i, std::size_t j>
     struct importLayer_functor {
         static void run(std::array<AbstractNeuralLayer*, NBLAYERS>* layers, std::vector<std::vector<std::vector<std::string>>>* weights,
                         std::vector<std::vector<std::vector<std::string>>>* biases) {
