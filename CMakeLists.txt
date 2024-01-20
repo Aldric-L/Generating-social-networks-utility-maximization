@@ -12,6 +12,15 @@ SMS-Simulator/SexualMarket.hpp
 SMS-Simulator/SexualMarket.cpp)
 add_executable(SexualMarketSimulation ${SOURCES})
 
+if(DEFINED GRAPH_SIZE)
+    message("Setting GRAPH SIZE in CMake to ${GRAPH_SIZE}")
+    set(CMAKE_GRAPH_SIZE ${GRAPH_SIZE})
+    configure_file (${CMAKE_CURRENT_SOURCE_DIR}/SMS-Simulator/CMakeConsts.h.in ${CMAKE_CURRENT_SOURCE_DIR}/SMS-Simulator/CMakeConsts.h @ONLY)
+    #target_compile_definitions(SexualMarketSimulation PUBLIC GRAPH_SIZE=${GRAPH_SIZE})
+endif(DEFINED GRAPH_SIZE)
+
+
+include_directories (SMS-Simulator/)
 add_subdirectory(SMS-Simulator/AKML-lib/)
 target_link_libraries(SexualMarketSimulation PRIVATE AKML)
 target_include_directories(SexualMarketSimulation PRIVATE src/AKML-lib/)

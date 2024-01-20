@@ -9,7 +9,6 @@ Release
 build-debug
 CMakeFiles
 CMakeScripts
-customlaunchscript.sh
 CMakeCache.txt
 CPackConfig.cmake
 CPackSourceConfig.cmake

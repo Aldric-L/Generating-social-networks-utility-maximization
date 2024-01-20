@@ -234,6 +234,11 @@ unsigned int SexualMarket::processARound(std::size_t totalrounds) {
                 SexualMarket::UtilitySaveTrackerType save (SexualMarket::currentRound, SexualMarket::getIndividual(i)->agentid, SexualMarket::getIndividual(i)->computeUtility(nullptr));
                 SexualMarket::utilityTrackersManager.addSave(save);
             }
+            #if COMPUTE_CLUSTERING
+            SexualMarket::ClusteringSaveTrackerType* clsave;
+            clsave = new SexualMarket::ClusteringSaveTrackerType(std::move(SexualMarket::computeClusteringCoefficients(&binaryadjacencymatrix)));
+            SexualMarket::clusteringTrackersManager.addSave(clsave);
+            #endif
         }else if (totalrounds != 0 && totalrounds > 100 && SexualMarket::currentRound % (totalrounds/100) == 0){
             std::cout << "\nThread " << std::this_thread::get_id() << " - Status: " << SexualMarket::currentRound*100/totalrounds << "% completed";
         }

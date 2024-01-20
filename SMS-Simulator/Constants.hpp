@@ -5,6 +5,8 @@
 //  Created by Aldric Labarthe on 14/11/2023.
 //
 
+#include "CMakeConsts.h"
+
 #include <stdio.h>
 #include <iostream>
 #include <array>
@@ -17,7 +19,10 @@
 #include <memory>
 #include <thread>
 
-#define GRAPH_SIZE 20
+#ifndef GRAPH_SIZE
+    #define GRAPH_SIZE 20
+#endif
+
 #define P_DIMENSION 100
 #define COMPUTE_CLUSTERING 1
 
