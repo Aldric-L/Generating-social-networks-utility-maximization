@@ -8,6 +8,12 @@
 #include "Individual.hpp"
 #include "SexualMarket.hpp"
 
+
+/*
+ * Each individual is constructed with a binary matrix P of dim P_DIMENSION
+ * The parameters gamma, is_greedy are random (N(9, 0.35) and U([1, 100-GREEDY_SHARE])
+ * Delta is fixed to 2
+ */
 Individual::Individual(SexualMarket& world, unsigned long int agentid){
 	this->world = &world;
     Individual::agentid = agentid;
@@ -37,6 +43,10 @@ akml::Matrix<float, P_DIMENSION, 1>& Individual::getP() {
 	return Individual::P;
 }
 
+
+/*
+ * Relations and scope are evaluated in the SexualMarket class, the individual does not compute them directly
+ */
 akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> Individual::getRelations(){
     return this->world->getIndividualRelations(this);
 }
@@ -45,6 +55,13 @@ std::vector<SexualMarket::Link> Individual::getScope() {
     return this->world->getIndividualScope(this);
 }
 
+/*
+ * For utility computing and take action processing, we build 4 matrices:
+ * - P_S: the union of the matrices P of individuals in scope
+ * - alpha: a column vector of relation weights fot each individual in scope (same order of P_S)
+ * - beta: a column vector of pointers to the individuals in the scope
+ * - eta: a column vector of pointers to the relations in the scope
+ */
 Individual::PSAndAlphaTuple Individual::buildPSAndAlpha(const akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1>& relations){
     // We count the number of relations that truly exist
     std::size_t effectiveRelationCount = 0;
@@ -97,7 +114,6 @@ float Individual::computeUtility(akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1,
             
         }
     }
-        
     
     if (effectiveRelationCount == 0){
         #if GRAPH_SIZE < 100
@@ -178,6 +194,19 @@ akml::DynamicMatrix<float> Individual::computeUtilityGrad(akml::Matrix<SexualMar
     return grad;
 }
 
+/*
+ * preprocessTakeAction is a method that choose what action to do in two cases: when it is turn for the individual to play,
+ * or when he is asked to answer to a call (target is here a pointer to the asker).
+ *
+ * In both cases, this method computes a fake relation matrix with all individuals in scope, in order to give it to
+ * the computeUtilityGrad method.
+ *
+ * If it is his turn: we process an argmax in abs on the grad to moove in the direction of the higher coefficient.
+ * If he is asked to answer a call, we only consider the relevant coefficient.
+ *
+ * If the action is negative, the function returns the desired action but with the 2nd component in nullptr
+ * If we need to ask someone, we put the target in the 2nd component.
+ */
 std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individual::preprocessTakeAction(Individual* target){
     akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> relations = this->getRelations();
     akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> rel_temp;
