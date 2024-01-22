@@ -8,6 +8,6 @@
 #ifndef CMakeConsts_h_in_h
 #define CMakeConsts_h_in_h
 
-#define GRAPH_SIZE 50
+#define GRAPH_SIZE 500
 
 #endif /* CMakeConsts_h_in_h */

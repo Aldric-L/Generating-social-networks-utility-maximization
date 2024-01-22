@@ -249,6 +249,7 @@ unsigned int SexualMarket::processARound(std::size_t totalrounds) {
             }
             #if COMPUTE_CLUSTERING
             SexualMarket::ClusteringSaveTrackerType* clsave;
+            auto binaryadjacencymatrix = SexualMarket::asBinaryAdjacencyMatrix();
             clsave = new SexualMarket::ClusteringSaveTrackerType(std::move(SexualMarket::computeClusteringCoefficients(&binaryadjacencymatrix)));
             SexualMarket::clusteringTrackersManager.addSave(clsave);
             #endif
