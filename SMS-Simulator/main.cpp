@@ -81,7 +81,7 @@ int main(int argc, const char * argv[]) {
                 else
                     inactive_consecutive_rounds_counter=0;
         }
-        #if GRAPH_SIZE < 50
+        #if GRAPH_SIZE < 75
             std::cout << "\n A look at the final adjacency matrix : \n";
             akml::cout_matrix(sm.asAdjacencyMatrix());
         

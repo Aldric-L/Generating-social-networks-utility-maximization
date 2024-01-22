@@ -120,7 +120,7 @@ akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> SexualMarket::getIndividualRe
     akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> linksForIndividual;
     unsigned short int incr = 0;
     for (std::size_t i(0); i < LINKS_NB; i++){
-        if (SexualMarket::links[i].first == indiv || SexualMarket::links[i].second == indiv){
+        if ((SexualMarket::links[i].first == indiv || SexualMarket::links[i].second == indiv)){
             linksForIndividual[{incr,0}] = &links[i];
             incr++;
         }
@@ -219,6 +219,19 @@ unsigned int SexualMarket::processARound(std::size_t totalrounds) {
     #if GRAPH_SIZE < 100
         std::cout << "\n\n ---- ROUND " << SexualMarket::currentRound;
     #endif
+    #if COMPUTE_CLEARING == 1
+    // Test implementation of a usure of weights and a clearing of small weights
+    if (SexualMarket::currentRound != 0 && SexualMarket::currentRound != 1 && SexualMarket::currentRound != totalrounds && SexualMarket::currentRound % 10 == 0){
+        for (std::size_t link_id(0); link_id < SexualMarket::links.size(); link_id++){
+            if (links[link_id].weight < 0.02)
+                SexualMarket::editLink(&links[link_id], 0);
+            else
+                SexualMarket::editLink(&links[link_id], links[link_id].weight-0.01);
+        }
+    }
+    #endif
+    
+    
     unsigned int inactions(0);
     for (std::size_t i(0); i < GRAPH_SIZE; i++){
         Individual* nodei = SexualMarket::getIndividual(i);
