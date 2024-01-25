@@ -29,7 +29,6 @@ class SexualMarket {
     protected:
         // We replace std::array<Link, LINKS_NB> links; by std::vector in order to register the Links in the heap and not in the stack. This is, in fact, very sad. I love static things. I grief the static array.
         std::vector<Link> links;
-        std::size_t currentRound = 0;
         akml::Matrix<Individual*, GRAPH_SIZE, 1> individuals;
         typedef akml::Save<6, std::size_t, unsigned long int, unsigned long int, float, float, bool> EdgeSaveTrackerType;
         typedef akml::Save<3, std::size_t, unsigned long int, float> UtilitySaveTrackerType;
@@ -42,6 +41,7 @@ class SexualMarket {
 
     public:
         static inline bool SHOULD_I_LOG = true;
+        std::size_t currentRound = 0;
         SexualMarket();
         ~SexualMarket();    
     

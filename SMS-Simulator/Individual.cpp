@@ -21,10 +21,22 @@ Individual::Individual(SexualMarket& world, unsigned long int agentid){
     std::mt19937 gen(rd());
     std::uniform_int_distribution<unsigned short int> distribution(0,1);
     std::size_t sum = 0;
+    
+    // TEMPORARY SETTING TO IMPLEMENT 2 GROUPS IN P
+    std::uniform_int_distribution<unsigned short int> inner_distribution(0,10);
     for (std::size_t i(0); i < P_DIMENSION; i++){
-        Individual::P(i+1,1) = (distribution(gen)==1) ? 1 : 0;
+        if (distribution(gen)==1)
+            Individual::P(i+1,1) = (inner_distribution(gen)>3) ? 1 : 0;
+        else
+            Individual::P(i+1,1) = (inner_distribution(gen)>6) ? 1 : 0;
         sum += (distribution(gen)==1) ? 1 : 0;
     }
+    
+    
+    /*for (std::size_t i(0); i < P_DIMENSION; i++){
+        Individual::P(i+1,1) = (distribution(gen)==1) ? 1 : 0;
+        sum += (distribution(gen)==1) ? 1 : 0;
+    }*/
     if (sum >= (100 - Individual::GREEDY_SHARE))
         Individual::is_greedy = true;
     else
@@ -190,7 +202,17 @@ akml::DynamicMatrix<float> Individual::computeUtilityGrad(akml::Matrix<SexualMar
         return (float)( ( Individual::gamma * std::pow( val, (Individual::gamma-1) ) ) / ( std::pow(1 - alpha_pow_gamma, 2) ) ) + scalaralpha;
     });
     grad = P_prod - Alpha_temp;
-    grad.transform([](float val) { return val/10; });
+    float maxgrad = akml::max(grad);
+    if (maxgrad > 1){
+        grad = 0.01 * grad;
+    }else if (maxgrad > 0.1){
+        grad = 0.1 * grad;
+    }else if (maxgrad > 0.01){
+        
+    }else if (maxgrad > 0.001){
+        //grad = 10 * grad;
+    }
+    //grad.transform([](float val) { return val/10; });
     return grad;
 }
 
@@ -216,6 +238,16 @@ std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individua
     // with whom there is no link at all, we create a fake little link of 0.00001 for individuals in scope.
     // To implement greediness without randomness, greedy individuals earn the scope of the individual that corresponds to their id in their relation matrix
     
+    // If greedy we select create a new scope entry
+    std::size_t greedy_target (0);
+    if (Individual::is_greedy && this->world->currentRound % 10 == 0){
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<unsigned short int> distribution(0,GRAPH_SIZE-2);
+        greedy_target = distribution(gen);
+    }
+    
+    
     // Pointers to relation matrix
     std::size_t internIncrement (0);
     akml::DynamicMatrix<SexualMarket::Link*> true_eta (GRAPH_SIZE-1, 1);
@@ -232,18 +264,21 @@ std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individua
                     break;
                 }
             }
-            if (Individual::is_greedy && rel == Individual::agentid){
+            
+            if (greedy_target != 0 && rel == greedy_target)
+                rel_temp[{greedy_target, 0}]->weight = 0.00002;
+            /*if (Individual::is_greedy && rel == Individual::agentid){
                 rel_temp[{rel, 0}]->weight = 0.00002;
             }else if (Individual::is_greedy && rel == (GRAPH_SIZE-Individual::agentid)){
                 rel_temp[{rel, 0}]->weight = 0.00002;
-            }
+            }*/
         }
         if (rel_temp[{rel, 0}]->weight > 0){
             true_eta(internIncrement+1, 1) = relations[{rel, 0}];
             internIncrement++;
         }
     }
-
+    
     // No relation found
     if (internIncrement == 0){
         #if GRAPH_SIZE < 100
@@ -293,10 +328,10 @@ std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individua
     
         float step = grad(max_i+1, 1);
         // We do not allow to move with a step that is wider that 0.2
-        step = std::min(step, (float)0.2);
-        step = std::max(step, (float)-0.2);
+        step = std::min(step, (float)0.15);
+        step = std::max(step, (float)-0.15);
         
-        float mov = std::max(0.f, ((std::get<1>(PS_Alpha)(max_i+1, 1) <= 0.0001) ? 0.f : std::get<1>(PS_Alpha)(max_i+1, 1)) + step);
+        float mov = std::max(0.f, ((std::get<1>(PS_Alpha)(max_i+1, 1) < 0.01) ? 0.f : std::get<1>(PS_Alpha)(max_i+1, 1)) + step);
         
         
         #if GRAPH_SIZE < 100

@@ -241,7 +241,8 @@ unsigned int SexualMarket::processARound(std::size_t totalrounds) {
         inactions += nodei->takeAction() ? 0 : 1;
     }
     #if GRAPH_SIZE >= 100
-        if ((totalrounds != 0 && totalrounds > 100 && SexualMarket::currentRound % (totalrounds/10) == 0) || SexualMarket::currentRound == 1) {
+        if ((MODE_ECO_LOG && ((totalrounds != 0 && totalrounds > 100 && SexualMarket::currentRound % totalrounds/10 == 0) || SexualMarket::currentRound == 1))
+            || (!MODE_ECO_LOG && SexualMarket::currentRound % 2 != 0 ) ) {
             std::cout << "\n Computing utility: round " << SexualMarket::currentRound << " / " << totalrounds << " thread " << std::this_thread::get_id();
             for (std::size_t i(0); i < GRAPH_SIZE; i++){
                 SexualMarket::UtilitySaveTrackerType save (SexualMarket::currentRound, SexualMarket::getIndividual(i)->agentid, SexualMarket::getIndividual(i)->computeUtility(nullptr));
