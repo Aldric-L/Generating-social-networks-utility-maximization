@@ -15,13 +15,13 @@
 
 namespace akml {
     template <akml::MatrixConcept MATRIX_TYPE, akml::Matrixable element_type>
-    inline MATRIX_TYPE transform(MATRIX_TYPE matrix, std::function<element_type(element_type, std::size_t, std::size_t)> transfunc){
+    inline MATRIX_TYPE transform(MATRIX_TYPE matrix, const std::function<element_type(element_type, std::size_t, std::size_t)> transfunc){
         matrix.transform(transfunc);
         return matrix;
     }
 
     template <akml::MatrixConcept MATRIX_TYPE, akml::Matrixable element_type>
-    inline MATRIX_TYPE transform(MATRIX_TYPE matrix, std::function<element_type(element_type)> transfunc){
+    inline MATRIX_TYPE transform(MATRIX_TYPE matrix, const std::function<element_type(element_type)> transfunc){
         matrix.transform(transfunc);
         return matrix;
     }
@@ -101,13 +101,36 @@ namespace akml {
         return total;
     }
 
+    template <akml::Matrixable MATRIX_INNER_TYPE>
+    inline MATRIX_INNER_TYPE inner_product(const akml::MatrixInterface<MATRIX_INNER_TYPE>& a){
+        if (!a.isInitialized())
+            throw std::invalid_argument("Matrix provided is not initialized.");
+        
+        bool A_iscol=false;
+        std::size_t dim(0);
+        if (a.getNColumns() == 1){
+            A_iscol = true;dim=a.getNRows();
+        }else if (a.getNRows() == 1){
+            A_iscol = false;dim=a.getNColumns();
+        }else{
+            throw std::invalid_argument("Matrices are not columns or lines");
+        }
+        
+        MATRIX_INNER_TYPE total(0);
+        for (std::size_t i=1; i <= dim; i++){
+            total += (A_iscol ? a.read(i, 1) : a.read(1, i));
+        }
+        return total;
+    }
+
     template <akml::MatrixConcept MATRIX_TYPE>
     inline MATRIX_TYPE hadamard_product(MATRIX_TYPE A, MATRIX_TYPE B){
         if (!A.isInitialized() || !B.isInitialized())
             throw std::invalid_argument("Matrix provided is not initialized.");
         if (A.getNColumns() != B.getNColumns() || A.getNRows() != B.getNRows())
             throw std::invalid_argument("Attempting to perform a product on non-equally sized matrix.");
-        MATRIX_TYPE product;
+        
+        MATRIX_TYPE product(A.getNRows(), A.getNColumns());
         for (std::size_t i=1; i <= A.getNRows(); i++){
             for (std::size_t j=1; j <= B.getNColumns(); j++){
                 product(i, j) = A(i, j) * B(i, j);
@@ -123,8 +146,8 @@ namespace akml {
         if (A.getNColumns() != A.getNRows() )
             throw std::invalid_argument("Attempting to pow non-squared matrix.");
         
-        for (std::size_t i=1; i <= power; i++){
-            A = A * A;
+        for (std::size_t i=2; i <= power; i++){
+            A *= std::move(A);
         }
         return A;
     };
@@ -272,6 +295,33 @@ namespace akml {
         return mean;
     }
 
+    template <akml::MatrixConcept MATRIX_TYPE>
+    inline MATRIX_TYPE mean(const std::vector<MATRIX_TYPE>& matrices){
+        if (matrices.size() == 0)
+            throw std::invalid_argument("Empty vector of matrices provided.");
+        
+        MATRIX_TYPE mean(matrices.front().getNRows(), matrices.front().getNColumns());
+        for (std::size_t mat_i(0); mat_i < matrices.size(); mat_i++){
+            if (!matrices.at(mat_i).isInitialized())
+                throw std::invalid_argument("Matrix provided is not initialized.");
+            
+            if (matrices.at(mat_i).getNColumns() != mean.getNColumns() || matrices.at(mat_i).getNRows() != mean.getNRows())
+                throw std::invalid_argument("Attempting to perform a mean on non-equally sized matrix.");
+            
+            for (std::size_t i=1; i <= matrices.at(mat_i).getNRows(); i++){
+                for (std::size_t j=1; j <= matrices.at(mat_i).getNColumns(); j++){
+                    mean(i, j) += matrices.at(mat_i).read(i, j);
+                }
+            }
+        }
+        for (std::size_t i=1; i <= mean.getNRows(); i++){
+            for (std::size_t j=1; j <= mean.getNColumns(); j++){
+                mean(i, j) = mean(i, j)/matrices.size();
+            }
+        }
+        return mean;
+    };
+
     template <akml::Arithmetic element_type>
     inline float stat_var(const MatrixInterface<element_type>& matrix, const element_type ignore=static_cast<element_type>(1),  float mean=0) {
         if (!matrix.isInitialized())
@@ -388,5 +438,44 @@ namespace akml {
         akml::DynamicMatrix<MATRIX_INNER_TYPE> newmat((std::array<std::array<MATRIX_INNER_TYPE, 1>, sizeof...(MATRIX_INNER_TYPES)>){{ {elements}... }});
         return newmat;
     }
+
+    template<akml::Matrixable MATRIX_INNER_TYPE>
+    inline akml::DynamicMatrix<MATRIX_INNER_TYPE> make_diagonal(const akml::DynamicMatrix<MATRIX_INNER_TYPE>& mat) {
+        if (!mat.isInitialized())
+            throw std::invalid_argument("Matrix provided is not initialized.");
+        if (mat.getNRows() > 1 && mat.getNColumns() > 1)
+            throw std::invalid_argument("Error with matrix dimension.");
+            
+        akml::DynamicMatrix<MATRIX_INNER_TYPE> res ((mat.getNRows() == 1) ? mat.getNColumns() : mat.getNRows(), (mat.getNRows() == 1) ? mat.getNColumns() : mat.getNRows());
+        for (std::size_t row(0); row < std::max(mat.getNRows(), mat.getNColumns()); row++){
+            res[{row, row}] = (mat.getNRows() == 1) ?  mat[{0, row}] : mat[{row, 0}];
+        }
+        return res;
+    }
+
+    template <akml::MatrixConcept MATRIX_TYPE>
+    inline MATRIX_TYPE& make_identity(MATRIX_TYPE& A){
+        if (!A.isInitialized())
+            throw std::invalid_argument("Matrix provided is not initialized.");
+        if (A.getNColumns() != A.getNRows())
+            throw std::invalid_argument("Identity matrix is a squared matrix.");
+        
+        for (std::size_t row(0); row < A.getNRows(); row++){
+            for (std::size_t col(0); col < A.getNColumns(); col++){
+                A[{row, col}] = (row == col) ? 1 : 0;
+            }
+        }
+        return A;
+    };
+
+    template <akml::MatrixConcept MATRIX_TYPE>
+    inline MATRIX_TYPE make_identity(const std::size_t dim){
+        MATRIX_TYPE A (dim, dim);
+        for (std::size_t row(0); row < dim; row++){
+            A[{row, row}] = 1;
+        }
+        return A;
+    };
+
 }
 #endif /* MatrixOperations_h */

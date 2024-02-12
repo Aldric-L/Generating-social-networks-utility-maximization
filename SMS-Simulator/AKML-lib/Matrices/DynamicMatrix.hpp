@@ -25,6 +25,9 @@ public:
     
     inline void resize(std::size_t r, std::size_t c){
         if (this->isInitialized()){
+            if (c == this->getNColumns() && r == this->getNRows())
+                return;
+            
             element_type* newstorage = new element_type[r*c];
             for (std::size_t line(0); line < r; line++){
                 for (std::size_t col(0); col < c; col++){
@@ -100,6 +103,25 @@ public:
         }
     }
     
+    //Column-based constructor
+    template <akml::MatrixInterfaceConcept<element_type> MatrixC>
+    inline DynamicMatrix(const std::vector<MatrixC*>& cols) : MatrixInterface<element_type>(cols[0]->getNRows(), cols.size()) {
+        if (cols.size() == 0)
+            throw std::invalid_argument("Empty initialize list.");
+        
+        for (std::size_t col(0); col < this->columns; col++){
+            if (cols.at(col)->getNRows() != this->rows)
+                throw std::invalid_argument("Heterogeneous initialize list.");
+        }
+        
+        this->createInternStorage();
+        for (std::size_t line(0); line < this->rows; line++){
+            for (std::size_t col(0); col < this->columns; col++){
+                *(this->m_data + line*(this->columns)+col) = cols.at(col)->read(line+1, 1);
+            }
+        }
+    }
+    
     template<std::size_t ROWS>
     inline DynamicMatrix(const std::vector<akml::Matrix<element_type, ROWS, 1>>& cols) : MatrixInterface<element_type>(ROWS, cols.size()) {
         if (cols.size() == 0)
@@ -123,24 +145,24 @@ public:
         }
     }
     
-    inline DynamicMatrix(const std::size_t rows, const std::size_t columns, std::function<element_type(element_type, std::size_t, std::size_t)>& transfunc) : MatrixInterface<element_type>(rows, columns) {
+    inline DynamicMatrix(const std::size_t rows, const std::size_t columns, const std::function<element_type(element_type, std::size_t, std::size_t)>& transfunc) : MatrixInterface<element_type>(rows, columns) {
         this->create();
         this->transform(transfunc);
     }
     
-    inline DynamicMatrix(const std::size_t rows, const std::size_t columns, std::function<element_type(element_type)>& transfunc) : MatrixInterface<element_type>(rows, columns) {
+    inline DynamicMatrix(const std::size_t rows, const std::size_t columns, const std::function<element_type(element_type)>& transfunc) : MatrixInterface<element_type>(rows, columns) {
         this->create();
         this->transform(transfunc);
     }
     
     //copy constructors
-    template <akml::MatrixInterfaceConcept<element_type> MatrixC>
-    inline DynamicMatrix(const MatrixC& other) : MatrixInterface<element_type>(other.getNRows(), other.getNColumns()) {
+    inline DynamicMatrix(const DynamicMatrix<element_type>& other) : MatrixInterface<element_type>(other.getNRows(), other.getNColumns()) {
         this->createInternStorage();
         std::copy(other.getStorage(), other.getStorageEnd(), this->m_data);
     }
     
-    inline DynamicMatrix(const DynamicMatrix<element_type>& other) : MatrixInterface<element_type>(other.getNRows(), other.getNColumns()) {
+    template <akml::MatrixInterfaceConcept<element_type> MatrixC>
+    inline DynamicMatrix(const MatrixC& other) : MatrixInterface<element_type>(other.getNRows(), other.getNColumns()) {
         this->createInternStorage();
         std::copy(other.getStorage(), other.getStorageEnd(), this->m_data);
     }
@@ -152,6 +174,12 @@ public:
 
     inline ~DynamicMatrix(){
         this->deleteInternStorage();
+    }
+    
+    template <akml::MatrixConcept MATRIX_TYPE>
+    inline void forceAssignement(const MATRIX_TYPE& matrix){
+        this->resize(matrix.getNRows(), matrix.getNColumns());
+        this->operator=(matrix);
     }
     
     inline void forceByteCopy(const element_type* storage, std::size_t len=0){
@@ -175,6 +203,23 @@ public:
                 *(this->getInternElement(line*COLUMNS+col)) = data[line][col];
             }
         }
+    }
+    
+    inline DynamicMatrix<element_type>& operator=(const DynamicMatrix<element_type>& other){
+        //if (this != &other){
+            if (other.getNColumns() != (this->columns) || other.getNRows() != (this->rows))
+                throw std::invalid_argument("Matrices should be equally sized to be assignable.");
+            
+            if (!other.isInitialized())
+                throw std::invalid_argument("DynamicMatrix provided is not initialized.");
+            
+            if (!this->isInitialized())
+                this->createInternStorage();
+            
+            std::copy(other.getStorage(), other.getStorageEnd(), this->m_data);
+        //}
+        
+        return *this;
     }
     
     template <akml::MatrixInterfaceConcept<element_type> MatrixC>
@@ -219,6 +264,7 @@ public:
         if (this != &other) {
             if (other.getNColumns() != this->columns || other.getNRows() != this->rows)
                 throw std::invalid_argument("Matrix should be equally sized to be assignable.");
+            this->deleteInternStorage();
             this->setMDataPointer(other.getStorage());
             other.setMDataPointer(nullptr);
         }
@@ -277,8 +323,10 @@ public:
     inline DynamicMatrix<element_type>& operator*=(const MatrixC& mat){
         if (!mat.isInitialized())
             throw std::invalid_argument("Matrix provided is not initialized.");
+        if (mat.getNColumns() != (this->columns) || mat.getNRows() != (this->rows))
+            throw std::invalid_argument("Matrices should be equally sized to be assignable.");
         
-        *this = product(*this, mat);
+        this->forceByteCopy(product(*this, mat).getStorage());
         return *this;
     }
     

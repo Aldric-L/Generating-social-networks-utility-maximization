@@ -21,8 +21,15 @@ public:
     inline void resize(std::size_t r, std::size_t c) = delete;
     inline void directSetNColumns(std::size_t c) = delete;
     inline void directSetNRows(std::size_t r) = delete;
+    template <akml::MatrixConcept MATRIX_TYPE>
+    inline void forceAssignement(const MATRIX_TYPE& matrix) = delete;
     
     inline Matrix(const bool fromscratch=false) : DynamicMatrix<element_type>(ROWS, COLUMNS, fromscratch) {};
+    
+    inline Matrix(const std::size_t rows, const std::size_t columns, const bool fromscratch=false) : DynamicMatrix<element_type>(ROWS, COLUMNS, fromscratch) {
+        if (rows != ROWS || columns != COLUMNS)
+            throw std::invalid_argument("Irregular initialization (contradictory dimension initialization).");
+    }
     
     //Column-based constructor
     inline Matrix(const std::array<akml::Matrix<element_type, ROWS, 1>, COLUMNS>& cols) : DynamicMatrix<element_type>(ROWS, COLUMNS, false) {
@@ -38,9 +45,9 @@ public:
     
     inline Matrix(const std::array <std::array <element_type, COLUMNS>, ROWS>& data) : DynamicMatrix<element_type>(data) {}
     
-    inline Matrix(std::function<element_type(element_type, std::size_t, std::size_t)>& transfunc) : DynamicMatrix<element_type>(ROWS, COLUMNS, transfunc) {}
+    inline Matrix(const std::function<element_type(element_type, std::size_t, std::size_t)>& transfunc) : DynamicMatrix<element_type>(ROWS, COLUMNS, transfunc) {}
     
-    inline Matrix(std::function<element_type(element_type)>& transfunc) : DynamicMatrix<element_type>(ROWS, COLUMNS, transfunc) {}
+    inline Matrix(const std::function<element_type(element_type)>& transfunc) : DynamicMatrix<element_type>(ROWS, COLUMNS, transfunc) {}
  
     //copy constructors
     inline Matrix(const Matrix<element_type, ROWS, COLUMNS>& other) : DynamicMatrix<element_type>(ROWS, COLUMNS, true) {
@@ -86,6 +93,7 @@ public:
     }
     
     inline Matrix<element_type, ROWS, COLUMNS>& operator=(Matrix<element_type, ROWS, COLUMNS>&& other) {
+        this->deleteInternStorage();
         this->setMDataPointer(other.getStorage());
         other.setMDataPointer(nullptr);
         return *this;

@@ -30,8 +30,6 @@
 
 #define LINKS_NB (GRAPH_SIZE*GRAPH_SIZE-GRAPH_SIZE)/2
 
-#include "AKML-lib/AKML.hpp"
-
 #ifndef Constants_h
 #define Constants_h
 

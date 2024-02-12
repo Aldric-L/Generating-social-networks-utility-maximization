@@ -240,7 +240,7 @@ std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individua
     
     // If greedy we select create a new scope entry
     std::size_t greedy_target (0);
-    if (Individual::is_greedy && this->world->currentRound % 10 == 0){
+    if (Individual::is_greedy && this->world->currentRound % 10 == 0 && this->world->currentRound < 1000 ){
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_int_distribution<unsigned short int> distribution(0,GRAPH_SIZE-2);

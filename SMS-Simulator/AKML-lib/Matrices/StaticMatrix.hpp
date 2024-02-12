@@ -38,6 +38,12 @@ public:
         (fromscratch) ? this->createInternStorage() : this->create();
     }
     
+    inline StaticMatrix(const std::size_t rows, const std::size_t columns, const bool fromscratch=false) : MatrixInterface<element_type>(ROWS, COLUMNS) {
+        if (rows != ROWS || columns != COLUMNS)
+            throw std::invalid_argument("Irregular initialization (contradictory dimension initialization).");
+        (fromscratch) ? this->createInternStorage() : this->create();
+    }
+    
     //Column-based constructor
     inline StaticMatrix(const std::array<akml::StaticMatrix<element_type, ROWS, 1>, COLUMNS>& cols) : MatrixInterface<element_type>(ROWS, COLUMNS) {
         if (cols.size() == 0)
@@ -74,12 +80,12 @@ public:
         std::copy(other.getStorage(), other.getStorageEnd(), this->m_data);
     }
     
-    inline StaticMatrix(std::function<element_type(element_type, std::size_t, std::size_t)>& transfunc) : MatrixInterface<element_type>(ROWS, COLUMNS) {
+    inline StaticMatrix(const std::function<element_type(element_type, std::size_t, std::size_t)>& transfunc) : MatrixInterface<element_type>(ROWS, COLUMNS) {
         this->create();
         this->transform(transfunc);
     }
     
-    inline StaticMatrix(std::function<element_type(element_type)>& transfunc) : MatrixInterface<element_type>(ROWS, COLUMNS) {
+    inline StaticMatrix(const std::function<element_type(element_type)>& transfunc) : MatrixInterface<element_type>(ROWS, COLUMNS) {
         this->create();
         this->transform(transfunc);
     }

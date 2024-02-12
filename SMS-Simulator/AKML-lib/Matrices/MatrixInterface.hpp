@@ -31,7 +31,7 @@ public:
     
     static inline std::function<element_type(element_type, std::size_t, std::size_t)> IDENTITY_TRANSFORM = [](element_type x, std::size_t row, std::size_t column) { return (column == row) ? static_cast<element_type>(1) : static_cast<element_type>(0);};
     
-    static inline std::function<element_type(element_type, std::size_t, std::size_t)> RANDOM_TRANSFORM = [](element_type x, std::size_t row, std::size_t column) { std::random_device rd;  std::mt19937 gen(rd()); std::normal_distribution<double> distribution(0.0,3); return distribution(gen); };
+    static inline std::function<element_type(element_type, std::size_t, std::size_t)> RANDOM_TRANSFORM = [](element_type x, std::size_t row, std::size_t column) { std::random_device rd;  std::mt19937 gen(rd()); std::normal_distribution<double> distribution(0,0.3); return distribution(gen); };
     
     MatrixInterface(const std::size_t rows, const std::size_t columns) : rows(rows), columns(columns) {};
     
@@ -48,6 +48,7 @@ public:
     //inline element_type*& getStorageEnd() { return this->m_data_end; }
     inline element_type* getStorage() const { return this->m_data; }
     inline element_type* getStorageEnd() const { return this->m_data_end; }
+    inline std::size_t getStorageLen() const { return (this->rows) * (this->columns); }
     inline element_type* getInternElement(const std::size_t pos) const {
         if (pos >= (this->rows) * (this->columns))
             throw std::invalid_argument("Attempt to access to an out of reach element of a matrix");
@@ -86,7 +87,7 @@ public:
     
     inline bool is_squared(){ return (this->getNColumns() == this->getNRows()); }
     
-    inline void transform(std::function<element_type(element_type, std::size_t, std::size_t)> transfunc){
+    inline void transform(const std::function<element_type(element_type, std::size_t, std::size_t)> transfunc){
         for (std::size_t i(0); i < (this->rows); i++){
             for (std::size_t j(0); j < (this->columns); j++){
                 operator[]({i, j}) = transfunc(operator[]({i, j}), i, j);
@@ -94,7 +95,7 @@ public:
         }
     }
     
-    inline void transform(std::function<element_type(element_type)> transfunc){
+    inline void transform(const std::function<element_type(element_type)> transfunc){
         for (std::size_t i(0); i < (this->rows)*(this->columns); i++){
             *(getInternElement(i)) = transfunc(*getInternElement(i));
         }
@@ -113,7 +114,7 @@ public:
                     std::cout << ", ";
             }
             if (i != matrix.getNRows()-1)
-                std::cout << "]," << std::endl;
+                std::cout << "],\n";
             else
                 std::cout << "]";
         }
