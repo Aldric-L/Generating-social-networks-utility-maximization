@@ -1,6 +1,6 @@
 //
 //  Individual.hpp
-//  Sexual Market Simulation
+//  Social MatrixSocialMatrix Simulation
 //
 //  Created by SMS Associates on 21/03/2023.
 //
@@ -8,21 +8,21 @@
 #define Individual_hpp
 
 #include "Constants.hpp"
-#include "SexualMarket.hpp"
+#include "SocialMatrix.hpp"
 
-class SexualMarket;
+class SocialMatrix;
 
 class Individual {
 	protected:
-        typedef std::tuple<akml::DynamicMatrix<float>, akml::DynamicMatrix<float>, akml::DynamicMatrix<Individual*>, akml::DynamicMatrix<SexualMarket::Link*>> PSAndAlphaTuple;
+        typedef std::tuple<akml::DynamicMatrix<float>, akml::DynamicMatrix<float>, akml::DynamicMatrix<Individual*>, akml::DynamicMatrix<SocialMatrix::Link*>> PSAndAlphaTuple;
     
         akml::Matrix<float, P_DIMENSION, 1> P;
-        SexualMarket *world;
+        SocialMatrix *world;
         float utility = 0;
     
-        PSAndAlphaTuple buildPSAndAlpha (const akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1>& relations);
-        akml::DynamicMatrix<float> computeUtilityGrad(akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1>& relations, PSAndAlphaTuple& PS_Alpha);
-        std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> preprocessTakeAction(Individual* target=nullptr);
+        PSAndAlphaTuple buildPSAndAlpha (const akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1>& relations);
+        akml::DynamicMatrix<float> computeUtilityGrad(akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1>& relations, PSAndAlphaTuple& PS_Alpha);
+        std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> preprocessTakeAction(Individual* target=nullptr);
         
 
 	public:
@@ -33,12 +33,12 @@ class Individual {
         float delta;
         unsigned long int agentid;
     
-		Individual(SexualMarket& world, unsigned long int agentid);
+		Individual(SocialMatrix& world, unsigned long int agentid);
         akml::Matrix<float, P_DIMENSION, 1>& getP();
         bool takeAction();
         bool responseToAction(Individual* from, float new_weight);
-        akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> getRelations();
-        std::vector<SexualMarket::Link> getScope();
-        float computeUtility(akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1>* relations);
+        akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1> getRelations();
+        std::vector<SocialMatrix::Link> getScope();
+        float computeUtility(akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1>* relations);
 };
 #endif /* Individual_hpp */

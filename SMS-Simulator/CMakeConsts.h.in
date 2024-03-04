@@ -1,6 +1,6 @@
 //
 //  CMakeConsts.h.in.h
-//  SexualMarketSimulation
+//  Social Matrix Simulation
 //
 //  Created by Aldric Labarthe on 20/01/2024.
 //

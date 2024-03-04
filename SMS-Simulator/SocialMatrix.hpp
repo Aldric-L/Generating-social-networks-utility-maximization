@@ -1,13 +1,13 @@
 //
-//  SexualMarket.hpp
-//  Sexual Market Simulation
+//  SocialMatrix.hpp
+//  Social Matrix Simulation
 //
 //  Created by SMS Associates on 21/03/2023.
 //
 
 
-#ifndef SexualMarket_hpp
-#define SexualMarket_hpp
+#ifndef SocialMatrix_hpp
+#define SocialMatrix_hpp
 
 #include "Constants.hpp"
 #include "AKML-lib/AgentBasedUtilities/Save.hpp"
@@ -15,7 +15,7 @@
 
 class Individual;
 
-class SexualMarket {
+class SocialMatrix {
     public:
         struct Link {
             Individual* first;
@@ -42,16 +42,16 @@ class SexualMarket {
     public:
         static inline bool SHOULD_I_LOG = true;
         std::size_t currentRound = 0;
-        SexualMarket();
-        ~SexualMarket();    
+        SocialMatrix();
+        ~SocialMatrix();    
     
         void initializeLinks();
-        akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> getIndividualRelations(Individual* indiv);
+        akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1> getIndividualRelations(Individual* indiv);
         akml::Matrix<Individual*, GRAPH_SIZE, 1> getIndividuals();
         Individual* getIndividual(const std::size_t indiv_id);
-        std::vector<SexualMarket::Link> getIndividualScope(Individual* indiv);
+        std::vector<SocialMatrix::Link> getIndividualScope(Individual* indiv);
         void editLink(Individual* indiv1, Individual* indiv2, float newWeight, bool accepted=true);
-        void editLink(SexualMarket::Link* link, float newWeight, bool accepted=true);
+        void editLink(SocialMatrix::Link* link, float newWeight, bool accepted=true);
         unsigned int processARound(std::size_t totalrounds=0);
         akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> asAdjacencyMatrix();
         akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> asBinaryAdjacencyMatrix(akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE>* adjacencymatrix = nullptr);
@@ -61,5 +61,5 @@ class SexualMarket {
 
 };
 
- /* SexualMarket_hpp */
+ /* SocialMatrix_hpp */
 #endif

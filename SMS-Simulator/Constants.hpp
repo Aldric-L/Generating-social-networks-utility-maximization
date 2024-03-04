@@ -1,6 +1,6 @@
 //
 //  Constants.hpp
-//  Sexual Market Simulation
+//  Social Matrix Simulation
 //
 //  Created by Aldric Labarthe on 14/11/2023.
 //
@@ -33,7 +33,7 @@
 #ifndef Constants_h
 #define Constants_h
 
-//#include "SexualMarket.hpp"
+//#include "SocialMatrix.hpp"
 //#include "Individual.hpp"
 
 #endif /* Constants_h */

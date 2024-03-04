@@ -14,7 +14,7 @@
 #include "AKML-lib/AKML.hpp"
 #include "Constants.hpp"
 #include "Individual.hpp"
-#include "SexualMarket.hpp"
+#include "SocialMatrix.hpp"
 
 bool is_number(const std::string& s) { return !s.empty() && std::find_if(s.begin(), s.end(), [](unsigned char c) { return !std::isdigit(c); }) == s.end(); }
 
@@ -39,9 +39,9 @@ int main(int argc, const char * argv[]) {
     }
     if (log == "yes" || log == "y"){
         std::cout << "\nLog mode active. Files will be saved in " << std::filesystem::current_path();
-        SexualMarket::SHOULD_I_LOG = true;
+        SocialMatrix::SHOULD_I_LOG = true;
     }else {
-        SexualMarket::SHOULD_I_LOG = false;
+        SocialMatrix::SHOULD_I_LOG = false;
     }
     int rounds = std::stoi(roundsinput);
     
@@ -64,7 +64,7 @@ int main(int argc, const char * argv[]) {
         //std::cout.setstate(std::ios_base::failbit);
     
     auto processGame = [](int rds) {
-        SexualMarket sm;
+        SocialMatrix sm;
         sm.initializeLinks();
         #if GRAPH_SIZE < 50
             std::cout << "\n A look to the initialization adjacency matrix : \n";

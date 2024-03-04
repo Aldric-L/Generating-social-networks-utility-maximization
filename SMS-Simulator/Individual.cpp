@@ -1,12 +1,12 @@
 //
 //  Individual.cpp
-//  Sexual Market Simulation
+//  Social Matrix Simulation
 //
 //  Created by SMS Associates on 21/03/2023.
 //
 
 #include "Individual.hpp"
-#include "SexualMarket.hpp"
+#include "SocialMatrix.hpp"
 
 
 /*
@@ -14,7 +14,7 @@
  * The parameters gamma, is_greedy are random (N(9, 0.35) and U([1, 100-GREEDY_SHARE])
  * Delta is fixed to 2
  */
-Individual::Individual(SexualMarket& world, unsigned long int agentid){
+Individual::Individual(SocialMatrix& world, unsigned long int agentid){
 	this->world = &world;
     Individual::agentid = agentid;
     std::random_device rd;
@@ -57,13 +57,13 @@ akml::Matrix<float, P_DIMENSION, 1>& Individual::getP() {
 
 
 /*
- * Relations and scope are evaluated in the SexualMarket class, the individual does not compute them directly
+ * Relations and scope are evaluated in the SocialMatrix class, the individual does not compute them directly
  */
-akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> Individual::getRelations(){
+akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1> Individual::getRelations(){
     return this->world->getIndividualRelations(this);
 }
 
-std::vector<SexualMarket::Link> Individual::getScope() {
+std::vector<SocialMatrix::Link> Individual::getScope() {
     return this->world->getIndividualScope(this);
 }
 
@@ -74,7 +74,7 @@ std::vector<SexualMarket::Link> Individual::getScope() {
  * - beta: a column vector of pointers to the individuals in the scope
  * - eta: a column vector of pointers to the relations in the scope
  */
-Individual::PSAndAlphaTuple Individual::buildPSAndAlpha(const akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1>& relations){
+Individual::PSAndAlphaTuple Individual::buildPSAndAlpha(const akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1>& relations){
     // We count the number of relations that truly exist
     std::size_t effectiveRelationCount = 0;
     for (std::size_t i(0); i < GRAPH_SIZE-1; i++)
@@ -87,7 +87,7 @@ Individual::PSAndAlphaTuple Individual::buildPSAndAlpha(const akml::Matrix<Sexua
     // Pointers to individual matrix
     akml::DynamicMatrix<Individual*> beta (effectiveRelationCount, 1);
     // Pointers to relation matrix
-    akml::DynamicMatrix<SexualMarket::Link*> eta (effectiveRelationCount, 1);
+    akml::DynamicMatrix<SocialMatrix::Link*> eta (effectiveRelationCount, 1);
     
     std::size_t internIncrement (0);
     for (std::size_t i(0); i < GRAPH_SIZE-1; i++){
@@ -108,10 +108,10 @@ Individual::PSAndAlphaTuple Individual::buildPSAndAlpha(const akml::Matrix<Sexua
     return std::make_tuple(P_S, alpha, beta, eta);
 }
 
-float Individual::computeUtility(akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1>* relations) {
+float Individual::computeUtility(akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1>* relations) {
     bool rel_td = false;
     if (relations == nullptr){
-        relations = new akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1>;
+        relations = new akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1>;
         *relations = this->getRelations();
         rel_td = true;
     }
@@ -177,7 +177,7 @@ float Individual::computeUtility(akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1,
     return LHS-(RHS1+RHS2);
 }
 
-akml::DynamicMatrix<float> Individual::computeUtilityGrad(akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1>& relations, Individual::PSAndAlphaTuple& PS_Alpha) {
+akml::DynamicMatrix<float> Individual::computeUtilityGrad(akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1>& relations, Individual::PSAndAlphaTuple& PS_Alpha) {
     akml::DynamicMatrix<float> Alpha_temp (std::get<1>(PS_Alpha));
     akml::DynamicMatrix<float> grad (std::get<1>(PS_Alpha).getNRows(), std::get<1>(PS_Alpha).getNColumns());
     
@@ -229,10 +229,10 @@ akml::DynamicMatrix<float> Individual::computeUtilityGrad(akml::Matrix<SexualMar
  * If the action is negative, the function returns the desired action but with the 2nd component in nullptr
  * If we need to ask someone, we put the target in the 2nd component.
  */
-std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individual::preprocessTakeAction(Individual* target){
-    akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> relations = this->getRelations();
-    akml::Matrix<SexualMarket::Link*, GRAPH_SIZE-1, 1> rel_temp;
-    std::vector<SexualMarket::Link> scope = this->getScope();
+std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individual::preprocessTakeAction(Individual* target){
+    akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1> relations = this->getRelations();
+    akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1> rel_temp;
+    std::vector<SocialMatrix::Link> scope = this->getScope();
     
     // Because we want to distinguish individuals that are in the scope but with whom there is no link and those  no link
     // with whom there is no link at all, we create a fake little link of 0.00001 for individuals in scope.
@@ -250,9 +250,9 @@ std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individua
     
     // Pointers to relation matrix
     std::size_t internIncrement (0);
-    akml::DynamicMatrix<SexualMarket::Link*> true_eta (GRAPH_SIZE-1, 1);
+    akml::DynamicMatrix<SocialMatrix::Link*> true_eta (GRAPH_SIZE-1, 1);
     for (std::size_t rel(0); rel < GRAPH_SIZE-1; rel++){
-        rel_temp[{rel, 0}] = new SexualMarket::Link;
+        rel_temp[{rel, 0}] = new SocialMatrix::Link;
         *rel_temp[{rel, 0}] = *relations[{rel, 0}];
         if (relations[{rel, 0}]->weight == 0){
             for (std::size_t i(0); i < scope.size(); i++){
@@ -284,7 +284,7 @@ std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individua
         #if GRAPH_SIZE < 100
         std::cout << "\nWant to take action but no individuals are in scope. Aborted.";
         #endif
-        SexualMarket::Link newlinkwanted (nullptr, nullptr, 0);
+        SocialMatrix::Link newlinkwanted (nullptr, nullptr, 0);
         return std::make_tuple(nullptr, nullptr, newlinkwanted, false);
     }
     
@@ -322,7 +322,7 @@ std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individua
             #if GRAPH_SIZE < 100
             std::cout << "\nWant to do an unsignifiant action. Aborted.";
             #endif
-            SexualMarket::Link newlinkwanted (nullptr, nullptr, 0);
+            SocialMatrix::Link newlinkwanted (nullptr, nullptr, 0);
             return std::make_tuple(nullptr, nullptr, newlinkwanted, false);
         }
     
@@ -339,7 +339,7 @@ std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individua
         //std::cout << "We verifiy true_eta : " << true_eta(max_i+1, 1)->first << " - " << true_eta(max_i+1, 1)->second << " - " << true_eta(max_i+1, 1)->weight << "\n";
         #endif
         
-        SexualMarket::Link newlinkwanted (true_eta(max_i+1, 1)->first, true_eta(max_i+1, 1)->second, mov);
+        SocialMatrix::Link newlinkwanted (true_eta(max_i+1, 1)->first, true_eta(max_i+1, 1)->second, mov);
         
         return std::make_tuple(true_eta(max_i+1, 1), std::get<2>(PS_Alpha)(max_i+1, 1), newlinkwanted, (grad(max_i+1, 1) <= 0));
     }else {
@@ -353,12 +353,12 @@ std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individua
         
         // target not found
         if (target_i == -1){
-            SexualMarket::Link newlinkwanted (nullptr, nullptr, 0);
+            SocialMatrix::Link newlinkwanted (nullptr, nullptr, 0);
             return std::make_tuple(nullptr, nullptr, newlinkwanted, false);
         }
         
         float mov = std::max(0.f, ((std::get<1>(PS_Alpha)(target_i+1, 1) <= 0.0001) ? 0.f : std::get<1>(PS_Alpha)(target_i+1, 1)) + grad(target_i+1, 1));
-        SexualMarket::Link newlinkwanted (true_eta(target_i+1, 1)->first, true_eta(target_i+1, 1)->second, mov);
+        SocialMatrix::Link newlinkwanted (true_eta(target_i+1, 1)->first, true_eta(target_i+1, 1)->second, mov);
         
         return std::make_tuple(true_eta(target_i+1, 1), std::get<2>(PS_Alpha)(target_i+1, 1), newlinkwanted, (grad(target_i+1, 1) <= 0));
         
@@ -367,7 +367,7 @@ std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> Individua
 }
 
 bool Individual::takeAction(){
-    std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> prefAction = Individual::preprocessTakeAction();
+    std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> prefAction = Individual::preprocessTakeAction();
     if (std::get<3>(prefAction) && std::get<0>(prefAction) != nullptr){
         this->world->editLink(std::get<0>(prefAction), std::get<2>(prefAction).weight, true);
         return true;
@@ -378,7 +378,7 @@ bool Individual::takeAction(){
 }
 
 bool Individual::responseToAction(Individual* from, float new_weight){
-    std::tuple<SexualMarket::Link*, Individual*, SexualMarket::Link, bool> prefAction = Individual::preprocessTakeAction(from);
+    std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> prefAction = Individual::preprocessTakeAction(from);
     if (std::get<0>(prefAction) != nullptr && std::get<2>(prefAction).weight > 0){
         #if GRAPH_SIZE < 100
         std::cout << "\nAsk to respond to action of " << from << " but we move to " << std::min(new_weight, std::get<2>(prefAction).weight) << std::endl;

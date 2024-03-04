@@ -1,4 +1,4 @@
-#  Sexual Market Simulation
+#  Social Matrix Simulation
 ### SMS Associates - 2023
 
 ## Build and installation 
