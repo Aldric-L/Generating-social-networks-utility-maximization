@@ -3,6 +3,7 @@ project(SocialMatrixSimulation LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 
 set(SOURCES SMS-Simulator/Constants.hpp
 SMS-Simulator/Individual.hpp
