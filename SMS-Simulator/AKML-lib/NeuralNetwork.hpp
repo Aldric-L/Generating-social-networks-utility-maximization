@@ -49,10 +49,17 @@ public:
     
     inline NeuralNetwork(const NeuralNetwork& othernet) :
         customOriginField(othernet.getCustomOriginField()),
-        layers(othernet.getLayers()),
         layers_nb(othernet.getLayerNb()),
         input_dim(othernet.getLayer(0)->getNeuronNumber()),
         output_dim(othernet.getLayer(othernet.getLayerNb()-1)->getNeuronNumber()) {
+            layers.reserve(layers_nb);
+            for (std::size_t layer_id(0); layer_id < othernet.getLayers().size(); layer_id++){
+                layers.push_back(new NeuralLayer(*(othernet.getLayers().at(layer_id))));
+            }
+            for (std::size_t i(0); i < layers.size(); i++){
+                layers.at(i)->setPrevLayer((i != 0) ? layers.at(i-1) : nullptr);
+                layers.at(i)->setNextLayer((i+1 < layers.size()) ? layers.at(i+1) : nullptr);
+            }
     };
     
     inline void operator=(const NeuralNetwork& othernet){
@@ -61,10 +68,17 @@ public:
                 delete layers.at(layer_id);
             }
         }
+        layers.clear();
         for (std::size_t layer_id(0); layer_id < othernet.getLayers().size(); layer_id++){
             layers.push_back(new NeuralLayer(*(othernet.getLayers().at(layer_id))));
         }
-        layers_nb = othernet.getLayerNb();
+        for (std::size_t i(0); i < layers.size(); i++){
+            layers.at(i)->setPrevLayer((i != 0) ? layers.at(i-1) : nullptr);
+            layers.at(i)->setNextLayer((i+1 < layers.size()) ? layers.at(i+1) : nullptr);
+        }
+        layers_nb = layers.size();
+        if (layers_nb != othernet.getLayerNb())
+            throw std::runtime_error("Copy constructor of NeuralNetwork has failed.");
         input_dim = othernet.getLayer(0)->getNeuronNumber();
         output_dim = othernet.getLayer(othernet.getLayerNb()-1)->getNeuronNumber();
     }
@@ -83,6 +97,7 @@ public:
             }
         }
         for (std::size_t i(0); i < layers_list.size(); i++){
+            layers.at(i)->setPrevLayer((i != 0) ? layers.at(i-1) : nullptr);
             layers.at(i)->setNextLayer((i+1 < layers_list.size()) ? layers.at(i+1) : nullptr);
         }
         
@@ -117,7 +132,7 @@ public:
                                       const akml::ErrorFunction<float, DynamicMatrix<float>>* errorFunc=&akml::ErrorFunctions::MSE,
                                       const GRADIENT_METHODS method=GRADIENT_METHODS::GRADIENT_DESCENT);
     
-    akml::DynamicMatrix<float> computeErrorGradient(akml::DynamicMatrix<float>& errorGrad);
+    akml::DynamicMatrix<float> computeErrorGradient(akml::DynamicMatrix<float> errorGrad);
 
     akml::DynamicMatrix<float> computeGradient();
     

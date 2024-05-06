@@ -34,10 +34,13 @@ class SocialMatrix {
         typedef akml::Save<3, std::size_t, unsigned long int, float> UtilitySaveTrackerType;
         typedef akml::Save<8, std::size_t, unsigned long int, float, bool, float, float, std::size_t, std::string> VerticesSaveTrackerType;
         typedef akml::MatrixSave<GRAPH_SIZE+1, float> ClusteringSaveTrackerType;
+        typedef akml::FullMatrixSave<akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE>> FinalSaveTrackerType;
         akml::CSV_Saver<EdgeSaveTrackerType> edgeTrackersManager;
         akml::CSV_Saver<UtilitySaveTrackerType> utilityTrackersManager;
         akml::CSV_Saver<VerticesSaveTrackerType> verticesTrackersManager;
         akml::CSV_Saver<ClusteringSaveTrackerType> clusteringTrackersManager;
+        akml::CSV_Saver<FinalSaveTrackerType> finalAdjacencyMatrixTrackersManager;
+        std::mt19937 gen;
 
     public:
         static inline bool SHOULD_I_LOG = true;

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.27)
 project(SocialMatrixSimulation LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
+set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 
 set(SOURCES SMS-Simulator/Constants.hpp
@@ -18,6 +18,9 @@ if(DEFINED GRAPH_SIZE)
     set(CMAKE_GRAPH_SIZE ${GRAPH_SIZE})
     configure_file (${CMAKE_CURRENT_SOURCE_DIR}/SMS-Simulator/CMakeConsts.h.in ${CMAKE_CURRENT_SOURCE_DIR}/SMS-Simulator/CMakeConsts.h @ONLY)
 endif(DEFINED GRAPH_SIZE)
+IF(CMAKE_BUILD_TYPE MATCHES Debug)
+    message("CMake Debug mode enabled")
+ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)
 
 
 include_directories (SMS-Simulator/)

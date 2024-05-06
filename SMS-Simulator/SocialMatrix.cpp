@@ -12,10 +12,10 @@ SocialMatrix::SocialMatrix(){
         std::cout << "\nThread " << std::this_thread::get_id() << " - Status: Creation";
     #endif
     links.reserve(LINKS_NB);
-    SocialMatrix::EdgeSaveTrackerType::default_parameters_name = {{ "round", "vertex1", "vertex2", "old_weight", "new_weight", "accepted" }};
-    SocialMatrix::UtilitySaveTrackerType::default_parameters_name = {{ "round", "agentid", "utility" }};
-    SocialMatrix::VerticesSaveTrackerType::default_parameters_name = {{ "round", "agentid", "gamma", "isgreedy", "meandist", "vardist", "maxdist", "P" }};
-    
+    edgeTrackersManager.setParameterNames({{ "round", "vertex1", "vertex2", "old_weight", "new_weight", "accepted" }});
+    utilityTrackersManager.setParameterNames({{ "round", "agentid", "utility" }});
+    verticesTrackersManager.setParameterNames({{ "round", "agentid", "gamma", "isgreedy", "meandist", "vardist", "maxdist", "P" }});
+
     SocialMatrix::VerticesSaveTrackerType* save;
     for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
         individuals[{indiv,0}] = new Individual(*this, indiv);
@@ -45,23 +45,26 @@ SocialMatrix::~SocialMatrix(){
                 p.push_back( char( individuals[{indiv,0}]->getP()(i+1, 1) + 48) );
             }
             dijkstra_distance_mat = akml::dijkstra_distance_algorithm(binaryadjacencymatrix, indiv);
-            //std::cout << "\n Indiv " << indiv << " mean= " << akml::mean(dijkstra_distance_mat, false, ULONG_MAX) << "\n";
-            //std::cout << dijkstra_distance_mat;
-            save = new SocialMatrix::VerticesSaveTrackerType(SocialMatrix::currentRound, individuals[{indiv,0}]->agentid, individuals[{indiv,0}]->gamma, individuals[{indiv,0}]->is_greedy, akml::mean(dijkstra_distance_mat, false, ULONG_MAX), akml::stat_var(dijkstra_distance_mat, ULONG_MAX), akml::max(dijkstra_distance_mat), p);
-            verticesTrackersManager.addSave(save);
+            verticesTrackersManager.addSave(SocialMatrix::currentRound, individuals[{indiv,0}]->agentid, individuals[{indiv,0}]->gamma, individuals[{indiv,0}]->is_greedy, akml::mean(dijkstra_distance_mat, false, ULONG_MAX), akml::stat_var(dijkstra_distance_mat, ULONG_MAX), akml::max(dijkstra_distance_mat), p);
         }
         
         #if COMPUTE_CLUSTERING
-        SocialMatrix::ClusteringSaveTrackerType* clsave;
-        clsave = new SocialMatrix::ClusteringSaveTrackerType(std::move(SocialMatrix::computeClusteringCoefficients(&binaryadjacencymatrix)));
-        SocialMatrix::clusteringTrackersManager.addSave(clsave);
+        SocialMatrix::clusteringTrackersManager.addSave(SocialMatrix::computeClusteringCoefficients(&binaryadjacencymatrix));
         #endif
+        SocialMatrix::finalAdjacencyMatrixTrackersManager.addSave(SocialMatrix::asAdjacencyMatrix());
         long int t = static_cast<long int> (std::clock());
         std::string curt = std::to_string(t);
-        SocialMatrix::edgeTrackersManager.saveToCSV("SMS-Save-Edges-" + curt + ".csv", false);
-        SocialMatrix::utilityTrackersManager.saveToCSV("SMS-Save-Utility-" + curt + ".csv", false);
-        SocialMatrix::verticesTrackersManager.saveToCSV("SMS-Save-Vertices-"  + curt + ".csv", false);
-        SocialMatrix::clusteringTrackersManager.saveToCSV("SMS-Save-Clustering-" + curt + ".csv", false);
+        
+        std::string prefix = "";
+        #if MODE_FOLDER_LOG
+        prefix = "sim_" + curt + "/";
+        std::filesystem::create_directories(prefix);
+        #endif
+        SocialMatrix::edgeTrackersManager.saveToCSV(prefix + "SMS-Save-Edges-" + curt + ".csv", false);
+        SocialMatrix::utilityTrackersManager.saveToCSV(prefix + "SMS-Save-Utility-" + curt + ".csv", false);
+        SocialMatrix::verticesTrackersManager.saveToCSV(prefix + "SMS-Save-Vertices-"  + curt + ".csv", false);
+        SocialMatrix::clusteringTrackersManager.saveToCSV(prefix + "SMS-Save-Clustering-" + curt + ".csv", false);
+        SocialMatrix::finalAdjacencyMatrixTrackersManager.saveToCSV(prefix + "SMS-Save-AdjacencyMatrix-" + curt + ".csv", false);
         
     }
     for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
@@ -84,14 +87,12 @@ void SocialMatrix::initializeLinks(){
             if (temp <= 4){
                 SocialMatrix::links[link_i].weight = temp * 0.1;
             }
-            
-            save = new SocialMatrix::EdgeSaveTrackerType(SocialMatrix::currentRound, SocialMatrix::links[link_i].first->agentid, SocialMatrix::links[link_i].second->agentid, 0, SocialMatrix::links[link_i].weight, true);
-            edgeTrackersManager.addSave(save);
+        
+            edgeTrackersManager.addSave(SocialMatrix::currentRound, SocialMatrix::links[link_i].first->agentid, SocialMatrix::links[link_i].second->agentid, 0, SocialMatrix::links[link_i].weight, true);
             link_i++;
         }
     }
     if (SocialMatrix::SHOULD_I_LOG){
-        SocialMatrix::VerticesSaveTrackerType* vertice_save;
         akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> binaryadjacencymatrix = SocialMatrix::asBinaryAdjacencyMatrix();
         akml::Matrix<std::size_t, GRAPH_SIZE, 1> dijkstra_distance_mat;
         for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
@@ -100,14 +101,11 @@ void SocialMatrix::initializeLinks(){
                 p.push_back( char( individuals[{indiv,0}]->getP()(i+1, 1) + 48) );
             }
             dijkstra_distance_mat = akml::dijkstra_distance_algorithm(binaryadjacencymatrix, indiv);
-            vertice_save = new SocialMatrix::VerticesSaveTrackerType(SocialMatrix::currentRound, individuals[{indiv,0}]->agentid, individuals[{indiv,0}]->gamma, individuals[{indiv,0}]->is_greedy, akml::mean(dijkstra_distance_mat, false, ULONG_MAX), akml::stat_var(dijkstra_distance_mat, ULONG_MAX), akml::max(dijkstra_distance_mat), p);
-            verticesTrackersManager.addSave(vertice_save);
+            verticesTrackersManager.addSave(SocialMatrix::currentRound, individuals[{indiv,0}]->agentid, individuals[{indiv,0}]->gamma, individuals[{indiv,0}]->is_greedy, akml::mean(dijkstra_distance_mat, false, ULONG_MAX), akml::stat_var(dijkstra_distance_mat, ULONG_MAX), akml::max(dijkstra_distance_mat), p);
             
         }
         #if COMPUTE_CLUSTERING
-        SocialMatrix::ClusteringSaveTrackerType* clsave;
-        clsave = new SocialMatrix::ClusteringSaveTrackerType(std::move(SocialMatrix::computeClusteringCoefficients(&binaryadjacencymatrix)));
-        clusteringTrackersManager.addSave(clsave);
+        clusteringTrackersManager.addSave(SocialMatrix::computeClusteringCoefficients(&binaryadjacencymatrix));
         #endif
     }
     SocialMatrix::currentRound = 1;
@@ -208,8 +206,7 @@ void SocialMatrix::editLink(SocialMatrix::Link* link, float newWeight, bool acce
     if (link == nullptr)
         throw std::invalid_argument("Attempting to edit a non-consistent link");
     
-    SocialMatrix::EdgeSaveTrackerType save(SocialMatrix::currentRound, link->first->agentid, link->second->agentid, link->weight, newWeight, accepted);
-    edgeTrackersManager.addSave(save);
+    edgeTrackersManager.addSave(SocialMatrix::currentRound, link->first->agentid, link->second->agentid, link->weight, newWeight, accepted);
     if (accepted)
         link->weight = newWeight;
 }
@@ -231,9 +228,19 @@ unsigned int SocialMatrix::processARound(std::size_t totalrounds) {
     }
     #endif
     
-    
+    std::uniform_int_distribution<std::size_t> distribution(0,GRAPH_SIZE-1);
     unsigned int inactions(0);
-    for (std::size_t i(0); i < GRAPH_SIZE; i++){
+    
+    std::size_t start_indiv = distribution(this->gen);
+    
+    for (std::size_t i(start_indiv); i < GRAPH_SIZE; i++){
+        Individual* nodei = SocialMatrix::getIndividual(i);
+        #if GRAPH_SIZE < 100
+            std::cout << "\n --Individual (" << i+1 << " / " << GRAPH_SIZE <<  ") " << nodei << std::endl;
+        #endif
+        inactions += nodei->takeAction() ? 0 : 1;
+    }
+    for (std::size_t i(0); i < start_indiv; i++){
         Individual* nodei = SocialMatrix::getIndividual(i);
         #if GRAPH_SIZE < 100
             std::cout << "\n --Individual (" << i+1 << " / " << GRAPH_SIZE <<  ") " << nodei << std::endl;
@@ -245,22 +252,18 @@ unsigned int SocialMatrix::processARound(std::size_t totalrounds) {
             || (!MODE_ECO_LOG && SocialMatrix::currentRound % 2 != 0 ) ) {
             std::cout << "\n Computing utility: round " << SocialMatrix::currentRound << " / " << totalrounds << " thread " << std::this_thread::get_id();
             for (std::size_t i(0); i < GRAPH_SIZE; i++){
-                SocialMatrix::UtilitySaveTrackerType save (SocialMatrix::currentRound, SocialMatrix::getIndividual(i)->agentid, SocialMatrix::getIndividual(i)->computeUtility(nullptr));
-                SocialMatrix::utilityTrackersManager.addSave(save);
+                SocialMatrix::utilityTrackersManager.addSave(SocialMatrix::currentRound, SocialMatrix::getIndividual(i)->agentid, SocialMatrix::getIndividual(i)->computeUtility(nullptr));
             }
             #if COMPUTE_CLUSTERING
-            SocialMatrix::ClusteringSaveTrackerType* clsave;
             auto binaryadjacencymatrix = SocialMatrix::asBinaryAdjacencyMatrix();
-            clsave = new SocialMatrix::ClusteringSaveTrackerType(std::move(SocialMatrix::computeClusteringCoefficients(&binaryadjacencymatrix)));
-            SocialMatrix::clusteringTrackersManager.addSave(clsave);
+            SocialMatrix::clusteringTrackersManager.addSave(SocialMatrix::computeClusteringCoefficients(&binaryadjacencymatrix));
             #endif
         }else if (totalrounds != 0 && totalrounds > 100 && SocialMatrix::currentRound % (totalrounds/100) == 0){
             std::cout << "\nThread " << std::this_thread::get_id() << " - Status: " << SocialMatrix::currentRound*100/totalrounds << "% completed";
         }
     #else
         for (std::size_t i(0); i < GRAPH_SIZE; i++){
-            SocialMatrix::UtilitySaveTrackerType save (SocialMatrix::currentRound, SocialMatrix::getIndividual(i)->agentid, SocialMatrix::getIndividual(i)->computeUtility(nullptr));
-            SocialMatrix::utilityTrackersManager.addSave(save);
+            SocialMatrix::utilityTrackersManager.addSave(SocialMatrix::currentRound, SocialMatrix::getIndividual(i)->agentid, SocialMatrix::getIndividual(i)->computeUtility(nullptr));
         }
     #endif
     

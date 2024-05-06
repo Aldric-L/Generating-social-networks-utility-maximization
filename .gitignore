@@ -23,7 +23,7 @@ IPD-ABM.xcodeproj
 .vs
 *.vscode
 *.pbxproj
-.git
+.git/
 .github
 *.Rproj
 *.RData
