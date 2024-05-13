@@ -15,6 +15,7 @@
 #include "Constants.hpp"
 #include "Individual.hpp"
 #include "SocialMatrix.hpp"
+#include "AKML-lib/AgentBasedUtilities/CLInterface.hpp"
 
 bool is_number(const std::string& s) { return !s.empty() && std::find_if(s.begin(), s.end(), [](unsigned char c) { return !std::isdigit(c); }) == s.end(); }
 
@@ -26,89 +27,93 @@ int main(int argc, const char * argv[]) {
     std::cout << " /____/_/  /_//____/   /____/_/_/ /_/ /_/\\__,_/_/\\__,_/\\__/\\____/_/      \n";
     std::cout << "\nWelcome in the SMS-Simulator ! \n";
     std::cout << "This build will generate simulations with " << GRAPH_SIZE << " individuals. \n";
-    std::string roundsinput = "";
     
-    while (!is_number(roundsinput)){
-        std::cout << "How many rounds would you like to simulate ? ";
-        std::cin >> roundsinput;
-    }
-    std::string log = "";
-    while (log != "yes" && log != "y" && log != "no" && log != "n"){
-        std::cout << "\nShould I log the results (yes/no) ? ";
-        std::cin >> log;
-    }
-    if (log == "yes" || log == "y"){
-        std::cout << "\nLog mode active. Files will be saved in " << std::filesystem::current_path();
-        SocialMatrix::SHOULD_I_LOG = true;
-    }else {
-        SocialMatrix::SHOULD_I_LOG = false;
-    }
-    int rounds = std::stoi(roundsinput);
+    std::size_t rounds = 1000;
+    unsigned short int simulationsNb = 1;
     
-    roundsinput = "";
-    while (!is_number(roundsinput)){
-        std::cout << "\nHow many simulations should be conducted in parallel ? ";
-        std::cin >> roundsinput;
+    auto CLOptionsTuple = std::make_tuple
+        (akml::CLOption<std::size_t> (&rounds, "R", "rounds", "How many rounds?"),
+         akml::CLOption<unsigned short int> (&simulationsNb, "S", "simuls", "How many simulations?"),
+         akml::CLOption<bool> (&SocialMatrix::SHOULD_I_LOG, "l", "log", "Should we log results?", true),
+         akml::CLOption<unsigned short int> (&Individual::GREEDY_SHARE, "G", "greedyS", "Share of greedy individuals (0-100)"),
+         akml::CLOption<unsigned short int> (&Individual::GREEDY_FREQ, "g", "greedyF", "Frequency of the greedy bonus (min: 1)", 10),
+         akml::CLOption<float> (&Individual::DEFAULT_DELTA, "D", "delta", "Utility parameter", 2),
+         akml::CLOption<float> (&Individual::GAMMA_MEAN, "G", "gamma", "Utility parameter", 9),
+         akml::CLOption<bool> (&Individual::HETEROGENEOUS_P, "p", "htroP", "Enable/Disable the two groups of P", true),
+         akml::CLOption<bool> (&Individual::HETEROGENEOUS_P, "c", "clearing", "Enable/Disable the clearing and decaying mechanism", true),
+         akml::CLOption<bool> (&Individual::HETEROGENEOUS_P, "C", "clustering", "Enable/Disable the computing of clustering coefficients", true));
+    
+    try {
+        akml::CLManager localCLManager(argc, argv, CLOptionsTuple);
+    }catch (...) {
+        return -1;
     }
     
-    int threads_nb = std::stoi(roundsinput);
+    if (SocialMatrix::SHOULD_I_LOG)
+        std::cout << "Log mode active. Files will be saved in " << std::filesystem::current_path() << "\n\n";
     
-    roundsinput = "";
-    while (!is_number(roundsinput) || std::stoi(roundsinput) < 0 || std::stoi(roundsinput) > 100){
-        std::cout << "\nWhat is the share of greedy individuals (0-100) ? ";
-        std::cin >> roundsinput;
-    }
-    Individual::GREEDY_SHARE = static_cast<unsigned short int>(std::stoi(roundsinput));
-    
-    //if (threads_nb > 1)
-        //std::cout.setstate(std::ios_base::failbit);
-    
-    auto processGame = [](int rds) {
+    auto processGame = [&CLOptionsTuple](std::size_t rds) {
         SocialMatrix sm;
-        sm.initializeLinks();
-        #if GRAPH_SIZE < 50
-            std::cout << "\n A look to the initialization adjacency matrix : \n";
-            akml::cout_matrix(sm.asAdjacencyMatrix());
-        #endif
-        unsigned short int inactive_consecutive_rounds_counter(0);
-        for (int i(0); i < rds; i++){
-                if (inactive_consecutive_rounds_counter == 3){
-                    std::cout << "\n\n\n Inactivity detected - Stopping generation at round " << i;
-                    break;
-                }
-                
-                if (sm.processARound(static_cast<std::size_t>(rds)) == GRAPH_SIZE)
-                    inactive_consecutive_rounds_counter++;
-                else
-                    inactive_consecutive_rounds_counter=0;
+        std::string logPath = sm.whereWillYouLog().first;
+        std::string logId = sm.whereWillYouLog().second;
+        auto start = std::chrono::high_resolution_clock::now();
+            sm.initializeLinks();
+            #if GRAPH_SIZE < 50
+                std::cout << "\n A look to the initialization adjacency matrix : \n";
+                akml::cout_matrix(sm.asAdjacencyMatrix());
+            #endif
+            unsigned short int inactive_consecutive_rounds_counter(0);
+            for (std::size_t i(0); i < rds; i++){
+                    if (inactive_consecutive_rounds_counter == 3){
+                        std::cout << "\n\n\n Inactivity detected - Stopping generation at round " << i;
+                        break;
+                    }
+                    
+                    if (sm.processARound(static_cast<std::size_t>(rds)) == GRAPH_SIZE)
+                        inactive_consecutive_rounds_counter++;
+                    else
+                        inactive_consecutive_rounds_counter=0;
+            }
+            #if GRAPH_SIZE < 75
+                std::cout << "\n A look at the final adjacency matrix : \n";
+                akml::cout_matrix(sm.asAdjacencyMatrix());
+            
+                std::cout << "\n A look at the Binary adjacency matrix : \n";
+                akml::cout_matrix(sm.asBinaryAdjacencyMatrix());
+            
+                std::cout << "\n A look at the Dijkstra adjacency matrix : \n";
+                akml::cout_matrix(sm.computeDegreesOfSeparation());
+            #endif
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> duration = end - start;
+        
+        if (SocialMatrix::SHOULD_I_LOG){
+            std::ofstream cout(std::string(logPath + "SMS-SimulInfos-" + logId +".txt"));
+            std::ios_base::sync_with_stdio(false);
+            auto *coutbuf = std::cout.rdbuf();
+            std::cout.rdbuf(cout.rdbuf());
+            akml::CLManager::printOptionsValues(false, CLOptionsTuple);
+            std::cout << "--executionTime=" << duration.count() << "\n";
+            std::cout.rdbuf(coutbuf);
         }
-        #if GRAPH_SIZE < 75
-            std::cout << "\n A look at the final adjacency matrix : \n";
-            akml::cout_matrix(sm.asAdjacencyMatrix());
-        
-            std::cout << "\n A look at the Binary adjacency matrix : \n";
-            akml::cout_matrix(sm.asBinaryAdjacencyMatrix());
-        
-            std::cout << "\n A look at the Dijkstra adjacency matrix : \n";
-            akml::cout_matrix(sm.computeDegreesOfSeparation());
-        #endif
     };
-    if (threads_nb > 1){
-        std::vector<std::thread> threads;
-        for (int th(0); th < threads_nb; th++){
-            std::thread thread(std::ref(processGame), rounds);
-            threads.push_back(std::move(thread));
-        }
-        for (int th(0); th < threads_nb; th++){
-            if (threads[th].joinable())
-                threads[th].join();
-        }
-    }else {
-        processGame(rounds);
-    }
     
-    if (threads_nb > 1)
-        std::cout.clear();
+    unsigned int maxThreads = (std::thread::hardware_concurrency()*MAX_THREADS_USAGE > 1) ? std::thread::hardware_concurrency()*MAX_THREADS_USAGE : 1;
+    
+    std::vector<std::thread> workers;
+    workers.reserve(maxThreads);
+    for (std::size_t s(0); s < simulationsNb;){
+        for (unsigned int conc_s(0); s+conc_s < std::min((std::size_t)simulationsNb, s+maxThreads); conc_s++){
+            std::cout << "Processing simulation " << s+conc_s+1 << " / " << simulationsNb << "\n";
+            workers.emplace_back(std::ref(processGame), rounds);
+        }
+        for (unsigned int conc_s(0); conc_s < workers.size(); conc_s++){
+            if (workers[conc_s].joinable())
+                workers[conc_s].join();
+        }
+        s += workers.size();
+        workers.clear();
+    }
     
     return 0;
 }

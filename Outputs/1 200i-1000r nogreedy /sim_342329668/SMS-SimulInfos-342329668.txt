@@ -1,0 +1,12 @@
+Options:
+--rounds=1000                   How many rounds?
+--simuls=64                     How many simulations?
+--log=1                         Should we log results?
+--greedyS=0                     Share of greedy individuals (0-100)
+--greedyF=10                    Frequency of the greedy bonus (min: 1)
+--delta=2.000000                Utility parameter
+--gamma=9.000000                Utility parameter
+--htroP=0                       Enable/Disable the two groups of P
+--clearing=0                    Enable/Disable the clearing and decaying mechanism
+--clustering=0                  Enable/Disable the computing of clustering coefficients
+--executionTime=54.9101

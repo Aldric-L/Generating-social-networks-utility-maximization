@@ -27,6 +27,10 @@ class Individual {
 
 	public:
         static inline unsigned short int GREEDY_SHARE = 0;
+        static inline unsigned short int GREEDY_FREQ = 10;
+        static inline float DEFAULT_DELTA = 2;
+        static inline float GAMMA_MEAN = 9;
+        static inline bool HETEROGENEOUS_P = true;
         
         bool is_greedy;
         float gamma;

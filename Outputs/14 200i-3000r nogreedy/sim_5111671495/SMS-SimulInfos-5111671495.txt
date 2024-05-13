@@ -1,0 +1,12 @@
+Options:
+--rounds=3000                   
+--simuls=64                     
+--log=1                         
+--greedyS=0                     
+--greedyF=10                    
+--delta=2.000000                
+--gamma=9.000000                
+--htroP=1                       
+--clearing=1                    
+--clustering=1                  
+--executionTime=127.943

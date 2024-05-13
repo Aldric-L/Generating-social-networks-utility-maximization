@@ -19,16 +19,16 @@
 #include <memory>
 #include <thread>
 #include <random>
+#include <algorithm>
 
 #ifndef GRAPH_SIZE
     #define GRAPH_SIZE 20
 #endif
 
 #define P_DIMENSION 100
-#define COMPUTE_CLUSTERING 1
-#define COMPUTE_CLEARING 1
 #define MODE_ECO_LOG 0
 #define MODE_FOLDER_LOG 1
+#define MAX_THREADS_USAGE 0.85
 
 #if MODE_FOLDER_LOG
     #include <filesystem>

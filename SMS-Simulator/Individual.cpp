@@ -22,21 +22,22 @@ Individual::Individual(SocialMatrix& world, unsigned long int agentid){
     std::uniform_int_distribution<unsigned short int> distribution(0,1);
     std::size_t sum = 0;
     
-    // TEMPORARY SETTING TO IMPLEMENT 2 GROUPS IN P
-    std::uniform_int_distribution<unsigned short int> inner_distribution(0,10);
-    for (std::size_t i(0); i < P_DIMENSION; i++){
-        if (distribution(gen)==1)
-            Individual::P(i+1,1) = (inner_distribution(gen)>3) ? 1 : 0;
-        else
-            Individual::P(i+1,1) = (inner_distribution(gen)>6) ? 1 : 0;
-        sum += (distribution(gen)==1) ? 1 : 0;
+    if (Individual::HETEROGENEOUS_P){
+        // IMPLEMENT 2 GROUPS IN P
+        std::uniform_int_distribution<unsigned short int> inner_distribution(0,10);
+        for (std::size_t i(0); i < P_DIMENSION; i++){
+            if (distribution(gen)==1)
+                Individual::P(i+1,1) = (inner_distribution(gen)>3) ? 1 : 0;
+            else
+                Individual::P(i+1,1) = (inner_distribution(gen)>6) ? 1 : 0;
+            sum += (distribution(gen)==1) ? 1 : 0;
+        }
+    }else {
+        for (std::size_t i(0); i < P_DIMENSION; i++){
+            Individual::P(i+1,1) = (distribution(gen)==1) ? 1 : 0;
+            sum += (distribution(gen)==1) ? 1 : 0;
+        }
     }
-    
-    
-    /*for (std::size_t i(0); i < P_DIMENSION; i++){
-        Individual::P(i+1,1) = (distribution(gen)==1) ? 1 : 0;
-        sum += (distribution(gen)==1) ? 1 : 0;
-    }*/
     if (sum >= (100 - Individual::GREEDY_SHARE))
         Individual::is_greedy = true;
     else
@@ -47,8 +48,8 @@ Individual::Individual(SocialMatrix& world, unsigned long int agentid){
     //while((g = norm(gen)) > 0.9 || g < 0.1){ g = norm(gen); }
     std::normal_distribution<float> norm(1,0.35);
     while((g = norm(gen)) > 1.8 || g < 0.1 || g==1){ g = norm(gen); }
-    Individual::gamma = g+9;
-    Individual::delta = 2;
+    Individual::gamma = g+Individual::GAMMA_MEAN;
+    Individual::delta = Individual::DEFAULT_DELTA;
 }
 
 akml::Matrix<float, P_DIMENSION, 1>& Individual::getP() {
@@ -217,7 +218,7 @@ akml::DynamicMatrix<float> Individual::computeUtilityGrad(akml::Matrix<SocialMat
 }
 
 /*
- * preprocessTakeAction is a method that choose what action to do in two cases: when it is turn for the individual to play,
+ * preprocessTakeAction is a method that chooses what action to do in two cases: when it is turn for the individual to play,
  * or when he is asked to answer to a call (target is here a pointer to the asker).
  *
  * In both cases, this method computes a fake relation matrix with all individuals in scope, in order to give it to
@@ -240,7 +241,7 @@ std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individua
     
     // If greedy we select create a new scope entry
     std::size_t greedy_target (0);
-    if (Individual::is_greedy && this->world->currentRound % 10 == 0 && this->world->currentRound < 1000 ){
+    if (Individual::is_greedy && this->world->currentRound % Individual::GREEDY_FREQ == 0 /*&& this->world->currentRound < 1000*/ ){
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_int_distribution<unsigned short int> distribution(0,GRAPH_SIZE-2);

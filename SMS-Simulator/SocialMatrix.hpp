@@ -41,9 +41,14 @@ class SocialMatrix {
         akml::CSV_Saver<ClusteringSaveTrackerType> clusteringTrackersManager;
         akml::CSV_Saver<FinalSaveTrackerType> finalAdjacencyMatrixTrackersManager;
         std::mt19937 gen;
+        std::string logPath = "";
+        std::string logID = "";
 
     public:
         static inline bool SHOULD_I_LOG = true;
+        static inline bool COMPUTE_CLUSTERING = true;
+        static inline bool COMPUTE_CLEARING = true;
+    
         std::size_t currentRound = 0;
         SocialMatrix();
         ~SocialMatrix();    
@@ -60,6 +65,7 @@ class SocialMatrix {
         akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> asBinaryAdjacencyMatrix(akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE>* adjacencymatrix = nullptr);
         akml::Matrix<std::size_t, GRAPH_SIZE, GRAPH_SIZE> computeDegreesOfSeparation(akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE>* binaryadjacencymatrix = nullptr);
         akml::Matrix<float, GRAPH_SIZE+1, 1> computeClusteringCoefficients(akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE>* binaryadjacencymatrix = nullptr);
+        std::pair<std::string, std::string> whereWillYouLog();
 
 
 };

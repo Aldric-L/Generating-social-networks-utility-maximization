@@ -1,0 +1,19 @@
+date,author,path,objective
+13/05,AL,1 200i-1000r nogreedy, No greedy and no heterogeneity in P
+13/05,AL,2 200i-1000r nogreedy, No greedy and but 2 groups heterogeneity in P
+13/05,AL,3 200i-1000r greedy 20-10, Greedy share 20% freq 10% no heterogeneity in P
+13/05,AL,4 200i-1000r greedy 40-10, Greedy share 40% freq 10% no heterogeneity in P
+13/05,AL,5 200i-1000r greedy 60-10, Greedy share 60% freq 10% no heterogeneity in P
+13/05,AL,6 200i-1000r greedy 80-10, Greedy share 80% freq 10% no heterogeneity in P
+13/05,AL,7 200i-1000r greedy 100-10, Greedy share 100% freq 10% no heterogeneity in P
+13/05,AL,8 200i-1000r greedy 50-30, Greedy share 50% freq 30% no heterogeneity in P
+13/05,AL,9 200i-1000r greedy 50-70, Greedy share 50% freq 70% no heterogeneity in P
+13/05,AL,10 200i-1000r nogreedy, No heterogeneity in P, delta 4
+13/05,AL,11 200i-1000r nogreedy, No heterogeneity in P, gamma 11
+13/05,AL,12 200i-1000r nogreedy, No heterogeneity in P, gamma 15
+13/05,AL,13 200i-3000r nogreedy, No heterogeneity in P
+13/05,AL,14 200i-3000r nogreedy, No heterogeneity in P, clearing mechanism
+
+
+
+
