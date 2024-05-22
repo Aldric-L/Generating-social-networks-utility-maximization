@@ -20,6 +20,7 @@
 #include <thread>
 #include <random>
 #include <algorithm>
+#include <filesystem>
 
 #ifndef GRAPH_SIZE
     #define GRAPH_SIZE 20
@@ -29,10 +30,6 @@
 #define MODE_ECO_LOG 0
 #define MODE_FOLDER_LOG 1
 #define MAX_THREADS_USAGE 0.85
-
-#if MODE_FOLDER_LOG
-    #include <filesystem>
-#endif
 
 #define LINKS_NB (GRAPH_SIZE*GRAPH_SIZE-GRAPH_SIZE)/2
 

@@ -8,9 +8,6 @@
 #include "Individual.hpp"
 
 SocialMatrix::SocialMatrix(){
-    #if GRAPH_SIZE >= 100
-        //std::cout << "\nThread " << std::this_thread::get_id() << " - Status: Creation";
-    #endif
     links.reserve(LINKS_NB);
     edgeTrackersManager.setParameterNames({{ "round", "vertex1", "vertex2", "old_weight", "new_weight", "accepted" }});
     utilityTrackersManager.setParameterNames({{ "round", "agentid", "utility" }});
@@ -36,10 +33,11 @@ SocialMatrix::SocialMatrix(){
     long int t = static_cast<long int> (std::clock());
     logID = std::to_string(t);
     
+    logPath = GLOBAL_LOG_PREFIX;
     #if MODE_FOLDER_LOG
-    logPath = "sim_" + logID + "/";
-    std::filesystem::create_directories(logPath);
+    logPath += "sim_" + logID + "/";
     #endif
+    std::filesystem::create_directories(logPath);
 }
 
 SocialMatrix::~SocialMatrix(){
@@ -63,7 +61,8 @@ SocialMatrix::~SocialMatrix(){
         SocialMatrix::edgeTrackersManager.saveToCSV(logPath + "SMS-Save-Edges-" + logID + ".csv", false);
         SocialMatrix::utilityTrackersManager.saveToCSV(logPath + "SMS-Save-Utility-" + logID + ".csv", false);
         SocialMatrix::verticesTrackersManager.saveToCSV(logPath + "SMS-Save-Vertices-"  + logID + ".csv", false);
-        SocialMatrix::clusteringTrackersManager.saveToCSV(logPath + "SMS-Save-Clustering-" + logID + ".csv", false);
+        if (SocialMatrix::COMPUTE_CLUSTERING)
+            SocialMatrix::clusteringTrackersManager.saveToCSV(logPath + "SMS-Save-Clustering-" + logID + ".csv", false);
         SocialMatrix::finalAdjacencyMatrixTrackersManager.saveToCSV(logPath + "SMS-Save-AdjacencyMatrix-" + logID + ".csv", false);
         
     }
@@ -106,11 +105,13 @@ void SocialMatrix::initializeLinks(){
         }
         if (SocialMatrix::COMPUTE_CLUSTERING)
             clusteringTrackersManager.addSave(SocialMatrix::computeClusteringCoefficients(&binaryadjacencymatrix));
+        
+        SocialMatrix::finalAdjacencyMatrixTrackersManager.addSave(SocialMatrix::asAdjacencyMatrix());
     }
     SocialMatrix::currentRound = 1;
-    #if GRAPH_SIZE >= 100
-        //std::cout << "Thread " << std::this_thread::get_id() << " - Status: Initialized\n";
-    #endif
+    /*#if GRAPH_SIZE >= 100
+        std::cout << "Thread " << std::this_thread::get_id() << " - Status: Initialized\n";
+    #endif*/
 }
 
 akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1> SocialMatrix::getIndividualRelations(Individual* indiv) {
@@ -230,7 +231,9 @@ unsigned int SocialMatrix::processARound(std::size_t totalrounds) {
     std::uniform_int_distribution<std::size_t> distribution(0,GRAPH_SIZE-1);
     unsigned int inactions(0);
     
-    std::size_t start_indiv = distribution(this->gen);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::size_t start_indiv = distribution(gen);
     
     for (std::size_t i(start_indiv); i < GRAPH_SIZE; i++){
         Individual* nodei = SocialMatrix::getIndividual(i);
@@ -248,18 +251,22 @@ unsigned int SocialMatrix::processARound(std::size_t totalrounds) {
     }
     #if GRAPH_SIZE >= 100
         if ((MODE_ECO_LOG && ((totalrounds != 0 && totalrounds > 100 && SocialMatrix::currentRound % totalrounds/10 == 0) || SocialMatrix::currentRound == 1))
-            || (!MODE_ECO_LOG && SocialMatrix::currentRound % 2 != 0 ) ) {
+            || (!MODE_ECO_LOG && SocialMatrix::currentRound % 5 == 0 ) ) {
             //std::cout << "\n Computing utility: round " << SocialMatrix::currentRound << " / " << totalrounds << " thread " << std::this_thread::get_id();
             for (std::size_t i(0); i < GRAPH_SIZE; i++){
                 SocialMatrix::utilityTrackersManager.addSave(SocialMatrix::currentRound, SocialMatrix::getIndividual(i)->agentid, SocialMatrix::getIndividual(i)->computeUtility(nullptr));
             }
-            if (SocialMatrix::COMPUTE_CLUSTERING){
-                auto binaryadjacencymatrix = SocialMatrix::asBinaryAdjacencyMatrix();
-                SocialMatrix::clusteringTrackersManager.addSave(SocialMatrix::computeClusteringCoefficients(&binaryadjacencymatrix));
+            
+            if (!MODE_ECO_LOG && SocialMatrix::currentRound % 250 == 0){
+                SocialMatrix::finalAdjacencyMatrixTrackersManager.addSave(SocialMatrix::asAdjacencyMatrix());
+                if (SocialMatrix::COMPUTE_CLUSTERING){
+                    auto binaryadjacencymatrix = SocialMatrix::asBinaryAdjacencyMatrix();
+                    SocialMatrix::clusteringTrackersManager.addSave(SocialMatrix::computeClusteringCoefficients(&binaryadjacencymatrix));
+                }
             }
-        }else if (totalrounds != 0 && totalrounds > 100 && SocialMatrix::currentRound % (totalrounds/100) == 0 && (SocialMatrix::currentRound*100/totalrounds)%10==0 ){
-            //std::cout << "Thread " << std::this_thread::get_id() << " - Status: " << SocialMatrix::currentRound*100/totalrounds << "% completed\n";
-        }
+        }/*else if (totalrounds != 0 && totalrounds > 100 && (SocialMatrix::currentRound+1) % (totalrounds/100) == 0 && ((SocialMatrix::currentRound+1)*100/totalrounds)%10==0 ){
+            std::cout << "Thread " << std::this_thread::get_id() << " - Status: " << SocialMatrix::currentRound*100/totalrounds << "% completed\n";
+        }*/
     #else
         for (std::size_t i(0); i < GRAPH_SIZE; i++){
             SocialMatrix::utilityTrackersManager.addSave(SocialMatrix::currentRound, SocialMatrix::getIndividual(i)->agentid, SocialMatrix::getIndividual(i)->computeUtility(nullptr));

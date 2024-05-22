@@ -307,12 +307,16 @@ concept CLArgumentConcept = std::is_base_of<AbstractCLOption, T>::value;
 class CLManager {
     template <std::size_t i>
     struct printOneValue {
+        static std::string to_string(const std::string elem){ return elem; }
+        template <typename T>
+        static std::string to_string(const T elem){ return std::to_string(elem); }
+        
         template <typename... Args>
         static void run(const bool withDescription, const std::tuple<Args...> &t) {
             std::string space = "                             ";
             if (std::get<i>(t).getValue() != nullptr)
-                std::cout << "--"<< std::get<i>(t).getLongName() << "=" << std::to_string(*(std::get<i>(t).getValue()))
-                << space.substr(0, space.size() - std::to_string(*(std::get<i>(t).getValue())).length() - std::get<i>(t).getLongName().length());
+                std::cout << "--"<< std::get<i>(t).getLongName() << "=" << to_string(*(std::get<i>(t).getValue()))
+                << space.substr(0, space.size() - to_string(*(std::get<i>(t).getValue())).length() - std::get<i>(t).getLongName().length());
             else
                 std::cout << "--"<< std::get<i>(t).getLongName() << "=?" << space.substr(0, space.size() - 1 - std::get<i>(t).getLongName().length());
             if (withDescription)

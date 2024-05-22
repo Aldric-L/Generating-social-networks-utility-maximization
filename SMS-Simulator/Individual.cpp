@@ -23,7 +23,6 @@ Individual::Individual(SocialMatrix& world, unsigned long int agentid){
     std::size_t sum = 0;
     
     if (Individual::HETEROGENEOUS_P){
-        // IMPLEMENT 2 GROUPS IN P
         std::uniform_int_distribution<unsigned short int> inner_distribution(0,10);
         for (std::size_t i(0); i < P_DIMENSION; i++){
             if (distribution(gen)==1)
@@ -43,9 +42,7 @@ Individual::Individual(SocialMatrix& world, unsigned long int agentid){
     else
         Individual::is_greedy = false;
     
-    //std::normal_distribution<float> norm(0.5,0.15);
     float g = 0;
-    //while((g = norm(gen)) > 0.9 || g < 0.1){ g = norm(gen); }
     std::normal_distribution<float> norm(1,0.35);
     while((g = norm(gen)) > 1.8 || g < 0.1 || g==1){ g = norm(gen); }
     Individual::gamma = g+Individual::GAMMA_MEAN;
@@ -237,15 +234,14 @@ std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individua
     
     // Because we want to distinguish individuals that are in the scope but with whom there is no link and those  no link
     // with whom there is no link at all, we create a fake little link of 0.00001 for individuals in scope.
-    // To implement greediness without randomness, greedy individuals earn the scope of the individual that corresponds to their id in their relation matrix
-    
     // If greedy we select create a new scope entry
-    std::size_t greedy_target (0);
-    if (Individual::is_greedy && this->world->currentRound % Individual::GREEDY_FREQ == 0 /*&& this->world->currentRound < 1000*/ ){
+    long long int greedy_target (-1);
+    if (Individual::is_greedy){
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_int_distribution<unsigned short int> distribution(0,GRAPH_SIZE-2);
         greedy_target = distribution(gen);
+        greedy_target = (((greedy_target+1)/(GRAPH_SIZE-1))*100 < Individual::GREEDY_FREQ) ? distribution(gen) : -1;
     }
     
     
@@ -266,13 +262,8 @@ std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individua
                 }
             }
             
-            if (greedy_target != 0 && rel == greedy_target)
-                rel_temp[{greedy_target, 0}]->weight = 0.00002;
-            /*if (Individual::is_greedy && rel == Individual::agentid){
-                rel_temp[{rel, 0}]->weight = 0.00002;
-            }else if (Individual::is_greedy && rel == (GRAPH_SIZE-Individual::agentid)){
-                rel_temp[{rel, 0}]->weight = 0.00002;
-            }*/
+            if (greedy_target != -1 && rel == greedy_target)
+                rel_temp[{static_cast<std::size_t>(greedy_target), 0}]->weight = 0.00002;
         }
         if (rel_temp[{rel, 0}]->weight > 0){
             true_eta(internIncrement+1, 1) = relations[{rel, 0}];

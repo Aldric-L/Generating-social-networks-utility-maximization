@@ -40,7 +40,7 @@ class SocialMatrix {
         akml::CSV_Saver<VerticesSaveTrackerType> verticesTrackersManager;
         akml::CSV_Saver<ClusteringSaveTrackerType> clusteringTrackersManager;
         akml::CSV_Saver<FinalSaveTrackerType> finalAdjacencyMatrixTrackersManager;
-        std::mt19937 gen;
+        //std::mt19937 gen;
         std::string logPath = "";
         std::string logID = "";
 
@@ -48,6 +48,7 @@ class SocialMatrix {
         static inline bool SHOULD_I_LOG = true;
         static inline bool COMPUTE_CLUSTERING = true;
         static inline bool COMPUTE_CLEARING = true;
+        static inline std::string GLOBAL_LOG_PREFIX = "";
     
         std::size_t currentRound = 0;
         SocialMatrix();

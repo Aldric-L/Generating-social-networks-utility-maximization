@@ -19,6 +19,7 @@ class Individual {
         akml::Matrix<float, P_DIMENSION, 1> P;
         SocialMatrix *world;
         float utility = 0;
+        //std::mt19937 gen;
     
         PSAndAlphaTuple buildPSAndAlpha (const akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1>& relations);
         akml::DynamicMatrix<float> computeUtilityGrad(akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1>& relations, PSAndAlphaTuple& PS_Alpha);
