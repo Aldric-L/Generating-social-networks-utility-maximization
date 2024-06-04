@@ -9,11 +9,10 @@
 
 SocialMatrix::SocialMatrix(){
     links.reserve(LINKS_NB);
-    edgeTrackersManager.setParameterNames({{ "round", "vertex1", "vertex2", "old_weight", "new_weight", "accepted" }});
+    edgeTrackersManager.setParameterNames({{ "round", "vertex1", "vertex2", "old_weight", "new_weight", "accepted", "forced" }});
     utilityTrackersManager.setParameterNames({{ "round", "agentid", "utility" }});
     verticesTrackersManager.setParameterNames({{ "round", "agentid", "gamma", "isgreedy", "meandist", "vardist", "maxdist", "P" }});
 
-    SocialMatrix::VerticesSaveTrackerType* save;
     for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
         individuals[{indiv,0}] = new Individual(*this, indiv);
     }
@@ -72,9 +71,7 @@ SocialMatrix::~SocialMatrix(){
 }
 
 void SocialMatrix::initializeLinks(){
-    // Any link that is to be initialized should be saved
-    SocialMatrix::EdgeSaveTrackerType* save;
-    int link_i(0);
+    std::size_t link_i(0);
     
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -87,12 +84,13 @@ void SocialMatrix::initializeLinks(){
                 SocialMatrix::links[link_i].weight = temp * 0.1;
             }
         
-            edgeTrackersManager.addSave(SocialMatrix::currentRound, SocialMatrix::links[link_i].first->agentid, SocialMatrix::links[link_i].second->agentid, 0, SocialMatrix::links[link_i].weight, true);
+            // Any link that is to be initialized should be saved
+            edgeTrackersManager.addSave(SocialMatrix::currentRound, SocialMatrix::links[link_i].first->agentid, SocialMatrix::links[link_i].second->agentid, 0, SocialMatrix::links[link_i].weight, true, true);
             link_i++;
         }
     }
     if (SocialMatrix::SHOULD_I_LOG){
-        akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> binaryadjacencymatrix = SocialMatrix::asBinaryAdjacencyMatrix();
+        akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> binaryadjacencymatrix(SocialMatrix::asBinaryAdjacencyMatrix());
         akml::Matrix<std::size_t, GRAPH_SIZE, 1> dijkstra_distance_mat;
         for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
             std::string p = "";
@@ -138,7 +136,7 @@ Individual* SocialMatrix::getIndividual(const std::size_t indiv_id) {
 
 std::vector<SocialMatrix::Link> SocialMatrix::getIndividualScope(Individual* indiv) {
     std::vector<SocialMatrix::Link> scope;
-    akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1> linksofIndividual = SocialMatrix::getIndividualRelations(indiv);
+    akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1> linksofIndividual(SocialMatrix::getIndividualRelations(indiv));
     for (std::size_t level0(0); level0 < GRAPH_SIZE-1; level0++){
         if (linksofIndividual[{level0, 0}]->weight > 0){
             Individual* target0 = nullptr;
@@ -189,24 +187,24 @@ std::vector<SocialMatrix::Link> SocialMatrix::getIndividualScope(Individual* ind
 }
 
 // Actually, I think this method should not exists : be optimized, use pointers.
-void SocialMatrix::editLink(Individual* indiv1, Individual* indiv2, float newWeight, bool accepted) {
+void SocialMatrix::editLink(Individual* indiv1, Individual* indiv2, float newWeight, bool accepted, bool forced) {
     if (indiv1 == indiv2 || indiv1 == nullptr || indiv2 == nullptr)
         throw std::invalid_argument("Attempting to edit a non-consistent link");
     
     for (std::size_t link_i(0); link_i<LINKS_NB; link_i++){
         if ((SocialMatrix::links[link_i].first == indiv1 && SocialMatrix::links[link_i].second == indiv2)
             || (SocialMatrix::links[link_i].second == indiv1 && SocialMatrix::links[link_i].first == indiv2)){
-            SocialMatrix::editLink(&SocialMatrix::links[link_i], newWeight, accepted);
+            SocialMatrix::editLink(&SocialMatrix::links[link_i], newWeight, accepted, forced);
             break;
         }
     }
 }
 
-void SocialMatrix::editLink(SocialMatrix::Link* link, float newWeight, bool accepted) {
+void SocialMatrix::editLink(SocialMatrix::Link* link, float newWeight, bool accepted, bool forced) {
     if (link == nullptr)
         throw std::invalid_argument("Attempting to edit a non-consistent link");
     
-    edgeTrackersManager.addSave(SocialMatrix::currentRound, link->first->agentid, link->second->agentid, link->weight, newWeight, accepted);
+    edgeTrackersManager.addSave(SocialMatrix::currentRound, link->first->agentid, link->second->agentid, link->weight, newWeight, accepted, forced);
     if (accepted)
         link->weight = newWeight;
 }
@@ -221,9 +219,9 @@ unsigned int SocialMatrix::processARound(std::size_t totalrounds) {
         if (SocialMatrix::currentRound != 0 && SocialMatrix::currentRound != 1 && SocialMatrix::currentRound != totalrounds && SocialMatrix::currentRound % 10 == 0){
             for (std::size_t link_id(0); link_id < SocialMatrix::links.size(); link_id++){
                 if (links[link_id].weight < 0.02)
-                    SocialMatrix::editLink(&links[link_id], 0);
+                    SocialMatrix::editLink(&links[link_id], 0, true, true);
                 else
-                    SocialMatrix::editLink(&links[link_id], links[link_id].weight-0.01);
+                    SocialMatrix::editLink(&links[link_id], links[link_id].weight-0.01, true, true);
             }
         }
     }

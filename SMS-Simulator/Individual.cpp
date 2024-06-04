@@ -14,9 +14,7 @@
  * The parameters gamma, is_greedy are random (N(9, 0.35) and U([1, 100-GREEDY_SHARE])
  * Delta is fixed to 2
  */
-Individual::Individual(SocialMatrix& world, unsigned long int agentid){
-	this->world = &world;
-    Individual::agentid = agentid;
+Individual::Individual(SocialMatrix& world, unsigned long int agentid) : kappa(DEFAULT_KAPPA), delta(DEFAULT_DELTA), world(&world), agentid(agentid){
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<unsigned short int> distribution(0,1);
@@ -46,7 +44,6 @@ Individual::Individual(SocialMatrix& world, unsigned long int agentid){
     std::normal_distribution<float> norm(1,0.35);
     while((g = norm(gen)) > 1.8 || g < 0.1 || g==1){ g = norm(gen); }
     Individual::gamma = g+Individual::GAMMA_MEAN;
-    Individual::delta = Individual::DEFAULT_DELTA;
 }
 
 akml::Matrix<float, P_DIMENSION, 1>& Individual::getP() {
@@ -163,7 +160,7 @@ float Individual::computeUtility(akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1,
     akml::DynamicMatrix<float> P_S (P_S_temp);
     akml::DynamicMatrix<float> P_prod (akml::matrix_product(akml::transpose(P_S), Individual::P));
     
-    float LHS = akml::inner_product(alpha, P_prod)*10/P_DIMENSION;// *100 ?
+    float LHS = akml::inner_product(alpha, std::move(P_prod))*kappa/P_DIMENSION;
     
     #if GRAPH_SIZE < 100
     std::cout << "\nUtility (" << agentid << " / " << GRAPH_SIZE << ") : LHS=" << LHS << " RHS=" << RHS1+RHS2 << " Total=" << LHS-(RHS1+RHS2) << "(Gamma=" << Individual::gamma << ")";
@@ -181,7 +178,7 @@ akml::DynamicMatrix<float> Individual::computeUtilityGrad(akml::Matrix<SocialMat
     
     akml::DynamicMatrix<float> P_prod (akml::matrix_product(akml::transpose(std::get<0>(PS_Alpha)), this->P));
     
-    P_prod.transform([](float val) { return (val*10)/P_DIMENSION; });
+    P_prod.transform([&kappa = kappa](float val) { return (val*kappa)/P_DIMENSION; });
     
     float scalaralpha = 0;
     for (std::size_t line(1); line <= Alpha_temp.getNRows(); line++){
@@ -361,7 +358,7 @@ std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individua
 bool Individual::takeAction(){
     std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> prefAction = Individual::preprocessTakeAction();
     if (std::get<3>(prefAction) && std::get<0>(prefAction) != nullptr){
-        this->world->editLink(std::get<0>(prefAction), std::get<2>(prefAction).weight, true);
+        this->world->editLink(std::get<0>(prefAction), std::get<2>(prefAction).weight, true, false);
         return true;
     }else if (std::get<1>(prefAction) != nullptr) {
         return std::get<1>(prefAction)->responseToAction(this, std::get<2>(prefAction).weight);
@@ -375,14 +372,14 @@ bool Individual::responseToAction(Individual* from, float new_weight){
         #if GRAPH_SIZE < 100
         std::cout << "\nAsk to respond to action of " << from << " but we move to " << std::min(new_weight, std::get<2>(prefAction).weight) << std::endl;
         #endif
-        this->world->editLink(std::get<0>(prefAction), std::min(new_weight, std::get<2>(prefAction).weight), true);
+        this->world->editLink(std::get<0>(prefAction), std::min(new_weight, std::get<2>(prefAction).weight), true, false);
         return true;
     }else if (std::get<0>(prefAction) != nullptr) {
         if (std::get<2>(prefAction).weight <= 0){
             #if GRAPH_SIZE < 100
             std::cout << "\nAsk to respond to action of " << from << " but our desire is negative or null (" << std::get<2>(prefAction).weight << ")" << std::endl;
             #endif
-            this->world->editLink(std::get<0>(prefAction), std::min(new_weight, std::get<2>(prefAction).weight), false);
+            this->world->editLink(std::get<0>(prefAction), std::min(new_weight, std::get<2>(prefAction).weight), false, false);
         }else{
             std::cout << "\nAsk to respond to action of " << from << " but he is not found" << std::endl;
         }

@@ -18,7 +18,6 @@ class Individual {
     
         akml::Matrix<float, P_DIMENSION, 1> P;
         SocialMatrix *world;
-        float utility = 0;
         //std::mt19937 gen;
     
         PSAndAlphaTuple buildPSAndAlpha (const akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1>& relations);
@@ -30,12 +29,14 @@ class Individual {
         static inline unsigned short int GREEDY_SHARE = 0;
         static inline unsigned short int GREEDY_FREQ = 10;
         static inline float DEFAULT_DELTA = 2;
+        static inline float DEFAULT_KAPPA = 10;
         static inline float GAMMA_MEAN = 9;
         static inline bool HETEROGENEOUS_P = true;
         
         bool is_greedy;
         float gamma;
         float delta;
+        float kappa;
         unsigned long int agentid;
     
 		Individual(SocialMatrix& world, unsigned long int agentid);

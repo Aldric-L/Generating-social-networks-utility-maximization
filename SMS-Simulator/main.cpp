@@ -26,7 +26,7 @@ int main(int argc, const char * argv[]) {
     std::cout << "  ___/ / /  / /___/ /   ___/ / / / / / / / /_/ / / /_/ / /_/ /_/ / /     \n";
     std::cout << " /____/_/  /_//____/   /____/_/_/ /_/ /_/\\__,_/_/\\__,_/\\__/\\____/_/      \n";
     std::cout << "\nWelcome in the SMS-Simulator ! \n";
-    std::cout << "This build will generate simulations with " << GRAPH_SIZE << " individuals. \n";
+    std::cout << "This build will generate simulations with " << GRAPH_SIZE << " individuals (MT" << ((float)MAX_THREADS_USAGE)/100 << "). \n";
     
     std::size_t rounds = 1000;
     unsigned short int simulationsNb = 1;
@@ -38,6 +38,7 @@ int main(int argc, const char * argv[]) {
          akml::CLOption<unsigned short int> (&Individual::GREEDY_SHARE, "s", "greedyS", "Share of greedy individuals (0-100)"),
          akml::CLOption<unsigned short int> (&Individual::GREEDY_FREQ, "f", "greedyF", "Frequency of the greedy bonus [0,100]", 10),
          akml::CLOption<float> (&Individual::DEFAULT_DELTA, "D", "delta", "Utility parameter", 2),
+         akml::CLOption<float> (&Individual::DEFAULT_KAPPA, "K", "kappa", "Utility parameter"),
          akml::CLOption<float> (&Individual::GAMMA_MEAN, "G", "gamma", "Utility parameter", 9),
          akml::CLOption<bool> (&Individual::HETEROGENEOUS_P, "p", "htroP", "Enable/Disable the two groups of P", false),
          akml::CLOption<bool> (&SocialMatrix::COMPUTE_CLEARING, "c", "clearing", "Enable/Disable the clearing and decaying mechanism", true),
@@ -94,12 +95,14 @@ int main(int argc, const char * argv[]) {
             auto *coutbuf = std::cout.rdbuf();
             std::cout.rdbuf(cout.rdbuf());
             akml::CLManager::printOptionsValues(false, CLOptionsTuple);
+            std::cout << "--agentsNb=" << GRAPH_SIZE << "\n";
+            std::cout << "--PDimension=" << P_DIMENSION << "\n";
             std::cout << "--executionTime=" << duration.count() << "\n";
             std::cout.rdbuf(coutbuf);
         }
     };
     
-    unsigned int maxThreads = (std::thread::hardware_concurrency()*MAX_THREADS_USAGE > 1) ? std::thread::hardware_concurrency()*MAX_THREADS_USAGE : 1;
+    unsigned int maxThreads = (std::thread::hardware_concurrency()*MAX_THREADS_USAGE/100 > 1) ? std::thread::hardware_concurrency()*MAX_THREADS_USAGE/100 : 1;
     
     std::vector<std::thread> workers;
     workers.reserve(maxThreads);

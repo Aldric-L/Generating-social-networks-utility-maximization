@@ -9,5 +9,6 @@
 #define CMakeConsts_h_in_h
 
 #define GRAPH_SIZE @CMAKE_GRAPH_SIZE@
+#define MAX_THREADS_USAGE @CMAKE_MAX_THREADS_USAGE@
 
 #endif /* CMakeConsts_h_in_h */

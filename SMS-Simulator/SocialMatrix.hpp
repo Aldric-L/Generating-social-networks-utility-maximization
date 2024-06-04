@@ -30,7 +30,7 @@ class SocialMatrix {
         // We replace std::array<Link, LINKS_NB> links; by std::vector in order to register the Links in the heap and not in the stack. This is, in fact, very sad. I love static things. I grief the static array.
         std::vector<Link> links;
         akml::Matrix<Individual*, GRAPH_SIZE, 1> individuals;
-        typedef akml::Save<6, std::size_t, unsigned long int, unsigned long int, float, float, bool> EdgeSaveTrackerType;
+        typedef akml::Save<7, std::size_t, unsigned long int, unsigned long int, float, float, bool, bool> EdgeSaveTrackerType;
         typedef akml::Save<3, std::size_t, unsigned long int, float> UtilitySaveTrackerType;
         typedef akml::Save<8, std::size_t, unsigned long int, float, bool, float, float, std::size_t, std::string> VerticesSaveTrackerType;
         typedef akml::MatrixSave<GRAPH_SIZE+1, float> ClusteringSaveTrackerType;
@@ -59,8 +59,8 @@ class SocialMatrix {
         akml::Matrix<Individual*, GRAPH_SIZE, 1> getIndividuals();
         Individual* getIndividual(const std::size_t indiv_id);
         std::vector<SocialMatrix::Link> getIndividualScope(Individual* indiv);
-        void editLink(Individual* indiv1, Individual* indiv2, float newWeight, bool accepted=true);
-        void editLink(SocialMatrix::Link* link, float newWeight, bool accepted=true);
+        void editLink(Individual* indiv1, Individual* indiv2, float newWeight, bool accepted=true, bool forced=false);
+        void editLink(SocialMatrix::Link* link, float newWeight, bool accepted=true, bool forced=false);
         unsigned int processARound(std::size_t totalrounds=0);
         akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> asAdjacencyMatrix();
         akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> asBinaryAdjacencyMatrix(akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE>* adjacencymatrix = nullptr);

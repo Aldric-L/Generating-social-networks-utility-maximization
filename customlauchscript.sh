@@ -1,6 +1,7 @@
 #!/bin/bash -e
 
 GH="${1:-200}"
+MAX_THREADS_USAGE="${2:-85}"
 BUILD_TYPE="Debug"
 
 
@@ -19,7 +20,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 echo "GRAPH_SIZE is set to: $GH"
+echo "MAX_THREADS_USAGE is set to: $MAX_THREADS_USAGE"
 echo "Build type is set to: $BUILD_TYPE"
-cmake -B build -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D GRAPH_SIZE=$GH || exit 1
+cmake -B build -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D GRAPH_SIZE=$GH -D MAX_THREADS_USAGE=$MAX_THREADS_USAGE || exit 1
 cmake --build build --config $BUILD_TYPE || exit 1
 ./build/SocialMatrixSimulation
