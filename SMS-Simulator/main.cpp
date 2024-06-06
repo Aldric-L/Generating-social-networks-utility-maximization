@@ -25,7 +25,7 @@ int main(int argc, const char * argv[]) {
     std::cout << "   \\__ \\/ /|_/ /\\__ \\    \\__ \\/ / __ `__ \\/ / / / / __ `/ __/ __ \\/ ___/ \n";
     std::cout << "  ___/ / /  / /___/ /   ___/ / / / / / / / /_/ / / /_/ / /_/ /_/ / /     \n";
     std::cout << " /____/_/  /_//____/   /____/_/_/ /_/ /_/\\__,_/_/\\__,_/\\__/\\____/_/      \n";
-    std::cout << "\nWelcome in the SMS-Simulator ! \n";
+    std::cout << "\nWelcome in the SMS-Simulator ! (v. "<< SMS_VERSION << ")\n";
     std::cout << "This build will generate simulations with " << GRAPH_SIZE << " individuals (MT" << ((float)MAX_THREADS_USAGE)/100 << "). \n";
     
     std::size_t rounds = 1000;
@@ -35,7 +35,7 @@ int main(int argc, const char * argv[]) {
         (akml::CLOption<std::size_t> (&rounds, "R", "rounds", "How many rounds?"),
          akml::CLOption<unsigned short int> (&simulationsNb, "S", "simuls", "How many simulations?"),
          akml::CLOption<bool> (&SocialMatrix::SHOULD_I_LOG, "l", "log", "Should we log results?", true),
-         akml::CLOption<unsigned short int> (&Individual::GREEDY_SHARE, "s", "greedyS", "Share of greedy individuals (0-100)"),
+         akml::CLOption<unsigned short int> (&Individual::GREEDY_SHARE, "s", "greedyS", "Share of greedy individuals [0,100]"),
          akml::CLOption<unsigned short int> (&Individual::GREEDY_FREQ, "f", "greedyF", "Frequency of the greedy bonus [0,100]", 10),
          akml::CLOption<float> (&Individual::DEFAULT_DELTA, "D", "delta", "Utility parameter", 2),
          akml::CLOption<float> (&Individual::DEFAULT_KAPPA, "K", "kappa", "Utility parameter"),
@@ -98,6 +98,7 @@ int main(int argc, const char * argv[]) {
             std::cout << "--agentsNb=" << GRAPH_SIZE << "\n";
             std::cout << "--PDimension=" << P_DIMENSION << "\n";
             std::cout << "--executionTime=" << duration.count() << "\n";
+            std::cout << "--SMSVersion=" << SMS_VERSION << "\n";
             std::cout.rdbuf(coutbuf);
         }
     };

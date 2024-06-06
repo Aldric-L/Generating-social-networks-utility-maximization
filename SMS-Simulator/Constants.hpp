@@ -7,6 +7,8 @@
 
 #include "CMakeConsts.h"
 
+#define SMS_VERSION "0.1 06/05/24"
+
 #include <stdio.h>
 #include <iostream>
 #include <array>
@@ -35,6 +37,10 @@
 #define MODE_FOLDER_LOG 1
 
 #define LINKS_NB ((GRAPH_SIZE*GRAPH_SIZE-GRAPH_SIZE)/2)
+
+#define DEPRECIATION_RATE (0.001)
+#define MIN_LINK_WEIGHT (0.005)
+#define MAX_LINK_CHANGE (0.15)
 
 #ifndef Constants_h
 #define Constants_h

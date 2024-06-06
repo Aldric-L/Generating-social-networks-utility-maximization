@@ -27,7 +27,7 @@ class SocialMatrix {
         };
         
     protected:
-        // We replace std::array<Link, LINKS_NB> links; by std::vector in order to register the Links in the heap and not in the stack. This is, in fact, very sad. I love static things. I grief the static array.
+        // We replace std::array<Link, LINKS_NB> links; by std::vector in order to register the Links in the heap and not in the stack. This is, in fact, very sad. I love static things. I grieve the static array.
         std::vector<Link> links;
         akml::Matrix<Individual*, GRAPH_SIZE, 1> individuals;
         typedef akml::Save<7, std::size_t, unsigned long int, unsigned long int, float, float, bool, bool> EdgeSaveTrackerType;

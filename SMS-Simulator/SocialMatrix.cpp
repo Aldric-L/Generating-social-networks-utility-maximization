@@ -7,8 +7,7 @@
 #include "SocialMatrix.hpp"
 #include "Individual.hpp"
 
-SocialMatrix::SocialMatrix(){
-    links.reserve(LINKS_NB);
+SocialMatrix::SocialMatrix() : links(LINKS_NB){
     edgeTrackersManager.setParameterNames({{ "round", "vertex1", "vertex2", "old_weight", "new_weight", "accepted", "forced" }});
     utilityTrackersManager.setParameterNames({{ "round", "agentid", "utility" }});
     verticesTrackersManager.setParameterNames({{ "round", "agentid", "gamma", "isgreedy", "meandist", "vardist", "maxdist", "P" }});
@@ -204,8 +203,23 @@ void SocialMatrix::editLink(SocialMatrix::Link* link, float newWeight, bool acce
     if (link == nullptr)
         throw std::invalid_argument("Attempting to edit a non-consistent link");
     
+    //if (!forced && newWeight == 0 && link->weight ==0)
+        //return;
+    
+    // We truly forbid insignificant moves that are inflating the log and keeping the simulation running forever
+    if (!forced && accepted && newWeight > 0 && newWeight < MIN_LINK_WEIGHT){
+        if (newWeight < link->weight){
+            edgeTrackersManager.addSave(SocialMatrix::currentRound, link->first->agentid, link->second->agentid, link->weight, 0, accepted, forced);
+            link->weight = newWeight;
+        }
+        else{
+            std::cout << "Forbidden link: " << link->weight << " - " << newWeight <<" \n";
+        }
+        return;
+    }
+        
     edgeTrackersManager.addSave(SocialMatrix::currentRound, link->first->agentid, link->second->agentid, link->weight, newWeight, accepted, forced);
-    if (accepted)
+    if (accepted || forced)
         link->weight = newWeight;
 }
 
@@ -218,10 +232,10 @@ unsigned int SocialMatrix::processARound(std::size_t totalrounds) {
         // Test implementation of a usure of weights and a clearing of small weights
         if (SocialMatrix::currentRound != 0 && SocialMatrix::currentRound != 1 && SocialMatrix::currentRound != totalrounds && SocialMatrix::currentRound % 10 == 0){
             for (std::size_t link_id(0); link_id < SocialMatrix::links.size(); link_id++){
-                if (links[link_id].weight < 0.02)
+                if (links[link_id].weight > 0 && links[link_id].weight < (MIN_LINK_WEIGHT + DEPRECIATION_RATE))
                     SocialMatrix::editLink(&links[link_id], 0, true, true);
-                else
-                    SocialMatrix::editLink(&links[link_id], links[link_id].weight-0.01, true, true);
+                else if (links[link_id].weight > 0)
+                    SocialMatrix::editLink(&links[link_id], links[link_id].weight-DEPRECIATION_RATE, true, true);
             }
         }
     }

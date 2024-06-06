@@ -307,18 +307,17 @@ std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individua
     #endif
     if (target == nullptr){
         std::size_t max_i = akml::arg_max(grad, true);
-        if (std::abs(grad(max_i+1, 1)) < 0.01){
+        if (std::abs(grad(max_i+1, 1)) < MIN_LINK_WEIGHT){
             #if GRAPH_SIZE < 100
             std::cout << "\nWant to do an unsignifiant action. Aborted.";
             #endif
-            SocialMatrix::Link newlinkwanted (nullptr, nullptr, 0);
-            return std::make_tuple(nullptr, nullptr, newlinkwanted, false);
+            return std::make_tuple(nullptr, nullptr, SocialMatrix::Link (nullptr, nullptr, 0), false);
         }
     
         float step = grad(max_i+1, 1);
         // We do not allow to move with a step that is wider that 0.2
-        step = std::min(step, (float)0.15);
-        step = std::max(step, (float)-0.15);
+        step = std::min(step, (float)MAX_LINK_CHANGE);
+        step = std::max(step, (float)-MAX_LINK_CHANGE);
         
         float mov = std::max(0.f, ((std::get<1>(PS_Alpha)(max_i+1, 1) < 0.01) ? 0.f : std::get<1>(PS_Alpha)(max_i+1, 1)) + step);
         
@@ -346,10 +345,13 @@ std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individua
             return std::make_tuple(nullptr, nullptr, newlinkwanted, false);
         }
         
-        float mov = std::max(0.f, ((std::get<1>(PS_Alpha)(target_i+1, 1) <= 0.0001) ? 0.f : std::get<1>(PS_Alpha)(target_i+1, 1)) + grad(target_i+1, 1));
-        SocialMatrix::Link newlinkwanted (true_eta(target_i+1, 1)->first, true_eta(target_i+1, 1)->second, mov);
+        // too little desire
+        if (std::abs(grad(target_i+1, 1)) < MIN_LINK_WEIGHT)
+            return std::make_tuple(true_eta(target_i+1, 1), std::get<2>(PS_Alpha)(target_i+1, 1), SocialMatrix::Link (true_eta(target_i+1, 1)->first, true_eta(target_i+1, 1)->second, 0.f), false);
         
-        return std::make_tuple(true_eta(target_i+1, 1), std::get<2>(PS_Alpha)(target_i+1, 1), newlinkwanted, (grad(target_i+1, 1) <= 0));
+        float mov = std::max(0.f, ((std::get<1>(PS_Alpha)(target_i+1, 1) <= 0.0001) ? 0.f : std::get<1>(PS_Alpha)(target_i+1, 1)) + grad(target_i+1, 1));
+        
+        return std::make_tuple(true_eta(target_i+1, 1), std::get<2>(PS_Alpha)(target_i+1, 1), SocialMatrix::Link (true_eta(target_i+1, 1)->first, true_eta(target_i+1, 1)->second, mov), (grad(target_i+1, 1) <= 0));
         
     }
     
@@ -372,14 +374,16 @@ bool Individual::responseToAction(Individual* from, float new_weight){
         #if GRAPH_SIZE < 100
         std::cout << "\nAsk to respond to action of " << from << " but we move to " << std::min(new_weight, std::get<2>(prefAction).weight) << std::endl;
         #endif
-        this->world->editLink(std::get<0>(prefAction), std::min(new_weight, std::get<2>(prefAction).weight), true, false);
-        return true;
-    }else if (std::get<0>(prefAction) != nullptr) {
+        if (std::get<2>(prefAction).weight == 0 || std::abs(std::get<2>(prefAction).weight - new_weight) > DEPRECIATION_RATE){
+            this->world->editLink(std::get<0>(prefAction), std::min(new_weight, std::get<2>(prefAction).weight), true, false);
+            return true;
+        }
+    }else if (std::get<0>(prefAction) != nullptr ) {
         if (std::get<2>(prefAction).weight <= 0){
             #if GRAPH_SIZE < 100
             std::cout << "\nAsk to respond to action of " << from << " but our desire is negative or null (" << std::get<2>(prefAction).weight << ")" << std::endl;
             #endif
-            this->world->editLink(std::get<0>(prefAction), std::min(new_weight, std::get<2>(prefAction).weight), false, false);
+            this->world->editLink(std::get<0>(prefAction), new_weight, false, false);
         }else{
             std::cout << "\nAsk to respond to action of " << from << " but he is not found" << std::endl;
         }
