@@ -10,6 +10,10 @@ SMS-Simulator/Individual.hpp
 SMS-Simulator/Individual.cpp
 SMS-Simulator/main.cpp
 SMS-Simulator/SocialMatrix.hpp
+SMS-Simulator/SocialMatrix.cpp
+SMS-Simulator/OptimalMatrix.cpp
+SMS-Simulator/OptimalMatrix.hpp
+SMS-Simulator/SocialMatrix.hpp
 SMS-Simulator/SocialMatrix.cpp)
 add_executable(SocialMatrixSimulation ${SOURCES})
 

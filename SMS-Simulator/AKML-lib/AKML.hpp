@@ -27,11 +27,15 @@
 #include "StaticLoops.hpp"
 #include "Matrices.hpp"
 #include "NeuralLayer.hpp"
-#include "NeuralNetwork.cpp"
-/*
+//#include "NeuralNetwork.cpp"
+
     #ifndef AKML_NN_INSTANCED
     #define AKML_NN_INSTANCED
         #include "NeuralNetwork.cpp"
-    #endif AKML_NN_INSTANCED
+    #endif
 
-*/
+    #ifdef AKML_NN_INSTANCED
+        #include "NeuralNetwork.hpp"
+    #endif
+
+

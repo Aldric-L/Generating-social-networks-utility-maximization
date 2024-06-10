@@ -9,15 +9,22 @@
 
 #include "Constants.hpp"
 #include "SocialMatrix.hpp"
+#include "UtilityFunction.hpp"
 
 class SocialMatrix;
 
 class Individual {
 	protected:
-        typedef std::tuple<akml::DynamicMatrix<float>, akml::DynamicMatrix<float>, akml::DynamicMatrix<Individual*>, akml::DynamicMatrix<SocialMatrix::Link*>> PSAndAlphaTuple;
+        struct PSAndAlphaTuple {
+            akml::DynamicMatrix<float> P_S; // the union of P vectors of individuals in scope
+            akml::DynamicMatrix<float> alpha; // a column vector of weights for each individual in scope (same order of P_S)
+            akml::DynamicMatrix<Individual*> beta; // a column vector of pointers to the individuals in the scope
+            akml::DynamicMatrix<SocialMatrix::Link*> eta; // a column vector of pointers to the relations in the scope
+        };
     
         akml::Matrix<float, P_DIMENSION, 1> P;
         SocialMatrix *world;
+        UtilityFunction* utilityFunc;
         //std::mt19937 gen;
     
         PSAndAlphaTuple buildPSAndAlpha (const akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1>& relations);
@@ -40,11 +47,13 @@ class Individual {
         unsigned long int agentid;
     
 		Individual(SocialMatrix& world, unsigned long int agentid);
+        ~Individual();
         akml::Matrix<float, P_DIMENSION, 1>& getP();
         bool takeAction();
         bool responseToAction(Individual* from, float new_weight);
         akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1> getRelations();
         std::vector<SocialMatrix::Link> getScope();
         float computeUtility(akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1>* relations);
+        inline const UtilityFunction* getUtilityFunction() const{ return utilityFunc; }
 };
 #endif /* Individual_hpp */

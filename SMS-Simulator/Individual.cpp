@@ -44,6 +44,13 @@ Individual::Individual(SocialMatrix& world, unsigned long int agentid) : kappa(D
     std::normal_distribution<float> norm(1,0.35);
     while((g = norm(gen)) > 1.8 || g < 0.1 || g==1){ g = norm(gen); }
     Individual::gamma = g+Individual::GAMMA_MEAN;
+    
+    utilityFunc = new KZALUtility(g+Individual::GAMMA_MEAN, Individual::DEFAULT_KAPPA, Individual::DEFAULT_DELTA);
+}
+
+
+Individual::~Individual(){
+    delete utilityFunc;
 }
 
 akml::Matrix<float, P_DIMENSION, 1>& Individual::getP() {
@@ -100,7 +107,7 @@ Individual::PSAndAlphaTuple Individual::buildPSAndAlpha(const akml::Matrix<Socia
         }
     }
     akml::DynamicMatrix<float> P_S (P_S_temp);
-    return std::make_tuple(P_S, alpha, beta, eta);
+    return { .P_S = P_S, .alpha = alpha, .beta = beta, .eta = eta};
 }
 
 float Individual::computeUtility(akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1>* relations) {
@@ -134,8 +141,8 @@ float Individual::computeUtility(akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1,
     std::vector<akml::Matrix<float, P_DIMENSION, 1>> P_S_temp (effectiveRelationCount);
     akml::DynamicMatrix<float> alpha (effectiveRelationCount, 1);
     
-    float RHS1 = 0;
-    float RHS2 = 0;
+    /*float RHS1 = 0;
+    float RHS2 = 0;*/
 
     std::size_t internIncrement (0);
     for (std::size_t i(0); i < GRAPH_SIZE-1; i++){
@@ -145,22 +152,23 @@ float Individual::computeUtility(akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1,
             }else {
                 (P_S_temp)[internIncrement] = (*relations)[{i,0}]->first->getP();
             }
-            float alpha_pow_gamma = std::pow( (*relations)[{i,0}]->weight, Individual::gamma );
+            /*float alpha_pow_gamma = std::pow( (*relations)[{i,0}]->weight, Individual::gamma );
             if (alpha_pow_gamma != 1)
                 RHS1 += ( alpha_pow_gamma ) / (1 - alpha_pow_gamma);
             RHS2 += (*relations)[{i,0}]->weight;
-            
+            */
             alpha(internIncrement+1, 1) = (*relations)[{i,0}]->weight;
             internIncrement++;
         }
         
     }
-    RHS2 = std::pow(RHS2, Individual::delta);
+    //RHS2 = std::pow(RHS2, Individual::delta);
     
     akml::DynamicMatrix<float> P_S (P_S_temp);
     akml::DynamicMatrix<float> P_prod (akml::matrix_product(akml::transpose(P_S), Individual::P));
+    P_prod = P_prod * (1/(float)P_DIMENSION);
     
-    float LHS = akml::inner_product(alpha, std::move(P_prod))*kappa/P_DIMENSION;
+    //float LHS = akml::inner_product(alpha, std::move(P_prod))*kappa/P_DIMENSION;
     
     #if GRAPH_SIZE < 100
     std::cout << "\nUtility (" << agentid << " / " << GRAPH_SIZE << ") : LHS=" << LHS << " RHS=" << RHS1+RHS2 << " Total=" << LHS-(RHS1+RHS2) << "(Gamma=" << Individual::gamma << ")";
@@ -169,16 +177,17 @@ float Individual::computeUtility(akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1,
     if (rel_td)
         delete relations;
     
-    return LHS-(RHS1+RHS2);
+    return /*LHS-(RHS1+RHS2)*/ utilityFunc->function(P_prod, alpha);
 }
 
 akml::DynamicMatrix<float> Individual::computeUtilityGrad(akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1>& relations, Individual::PSAndAlphaTuple& PS_Alpha) {
-    akml::DynamicMatrix<float> Alpha_temp (std::get<1>(PS_Alpha));
-    akml::DynamicMatrix<float> grad (std::get<1>(PS_Alpha).getNRows(), std::get<1>(PS_Alpha).getNColumns());
+    akml::DynamicMatrix<float> P_prod (akml::matrix_product(akml::transpose(PS_Alpha.P_S), this->P));
+    P_prod = P_prod * (1/(float)P_DIMENSION);
     
-    akml::DynamicMatrix<float> P_prod (akml::matrix_product(akml::transpose(std::get<0>(PS_Alpha)), this->P));
+    /*akml::DynamicMatrix<float> Alpha_temp (PS_Alpha.alpha);
+    akml::DynamicMatrix<float> grad (PS_Alpha.alpha.getNRows(), PS_Alpha.alpha.getNColumns());
     
-    P_prod.transform([&kappa = kappa](float val) { return (val*kappa)/P_DIMENSION; });
+    P_prod.transform([&kappa = kappa](float val) { return (val*kappa); });
     
     float scalaralpha = 0;
     for (std::size_t line(1); line <= Alpha_temp.getNRows(); line++){
@@ -196,7 +205,9 @@ akml::DynamicMatrix<float> Individual::computeUtilityGrad(akml::Matrix<SocialMat
         
         return (float)( ( Individual::gamma * std::pow( val, (Individual::gamma-1) ) ) / ( std::pow(1 - alpha_pow_gamma, 2) ) ) + scalaralpha;
     });
-    grad = P_prod - Alpha_temp;
+    grad = P_prod - Alpha_temp;*/
+    akml::DynamicMatrix<float> grad = utilityFunc->derivative(P_prod, PS_Alpha.alpha);
+    
     float maxgrad = akml::max(grad);
     if (maxgrad > 1){
         grad = 0.01 * grad;
@@ -295,10 +306,10 @@ std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individua
     for (std::size_t i(0); i < grad.getNRows(); i++){
         // You can't select an individual that you don't see (no freehate)
         // Since the implementation of dynamic matrices this extra-care is not relevant
-        if (std::get<2>(PS_Alpha)(i+1, 1) == nullptr){
+        if (PS_Alpha.beta(i+1, 1) == nullptr){
             grad(i+1, 1) = 0;
         // You can't reduce a friendship that does not exist
-        }else if (grad(i+1, 1) < 0 && std::get<1>(PS_Alpha)(i+1, 1) <= 0.0001 ){
+        }else if (grad(i+1, 1) < 0 && PS_Alpha.alpha(i+1, 1) <= 0.0001 ){
             grad(i+1, 1) = 0;
         }
     }
@@ -319,7 +330,7 @@ std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individua
         step = std::min(step, (float)MAX_LINK_CHANGE);
         step = std::max(step, (float)-MAX_LINK_CHANGE);
         
-        float mov = std::max(0.f, ((std::get<1>(PS_Alpha)(max_i+1, 1) < 0.01) ? 0.f : std::get<1>(PS_Alpha)(max_i+1, 1)) + step);
+        float mov = std::max(0.f, ((PS_Alpha.alpha(max_i+1, 1) < 0.01) ? 0.f : PS_Alpha.alpha(max_i+1, 1)) + step);
         
         
         #if GRAPH_SIZE < 100
@@ -329,11 +340,11 @@ std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individua
         
         SocialMatrix::Link newlinkwanted (true_eta(max_i+1, 1)->first, true_eta(max_i+1, 1)->second, mov);
         
-        return std::make_tuple(true_eta(max_i+1, 1), std::get<2>(PS_Alpha)(max_i+1, 1), newlinkwanted, (grad(max_i+1, 1) <= 0));
+        return std::make_tuple(true_eta(max_i+1, 1), PS_Alpha.beta(max_i+1, 1), newlinkwanted, (grad(max_i+1, 1) <= 0));
     }else {
         long int target_i = -1;
-        for (std::size_t i(0); i < std::get<2>(PS_Alpha).getNRows(); i++){
-            if (std::get<2>(PS_Alpha)(i+1, 1) == target){
+        for (std::size_t i(0); i < PS_Alpha.beta.getNRows(); i++){
+            if (PS_Alpha.beta(i+1, 1) == target){
                 target_i = i;
                 break;
             }
@@ -347,11 +358,11 @@ std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individua
         
         // too little desire
         if (std::abs(grad(target_i+1, 1)) < MIN_LINK_WEIGHT)
-            return std::make_tuple(true_eta(target_i+1, 1), std::get<2>(PS_Alpha)(target_i+1, 1), SocialMatrix::Link (true_eta(target_i+1, 1)->first, true_eta(target_i+1, 1)->second, 0.f), false);
+            return std::make_tuple(true_eta(target_i+1, 1), PS_Alpha.beta(target_i+1, 1), SocialMatrix::Link (true_eta(target_i+1, 1)->first, true_eta(target_i+1, 1)->second, 0.f), false);
         
-        float mov = std::max(0.f, ((std::get<1>(PS_Alpha)(target_i+1, 1) <= 0.0001) ? 0.f : std::get<1>(PS_Alpha)(target_i+1, 1)) + grad(target_i+1, 1));
+        float mov = std::max(0.f, ((PS_Alpha.alpha(target_i+1, 1) <= 0.0001) ? 0.f : PS_Alpha.alpha(target_i+1, 1)) + grad(target_i+1, 1));
         
-        return std::make_tuple(true_eta(target_i+1, 1), std::get<2>(PS_Alpha)(target_i+1, 1), SocialMatrix::Link (true_eta(target_i+1, 1)->first, true_eta(target_i+1, 1)->second, mov), (grad(target_i+1, 1) <= 0));
+        return std::make_tuple(true_eta(target_i+1, 1), PS_Alpha.beta(target_i+1, 1), SocialMatrix::Link (true_eta(target_i+1, 1)->first, true_eta(target_i+1, 1)->second, mov), (grad(target_i+1, 1) <= 0));
         
     }
     

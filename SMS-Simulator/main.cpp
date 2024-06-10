@@ -5,7 +5,7 @@
 //  ___/ / /  / /___/ /   ___/ / / / / / / / /_/ / / /_/ / /_/ /_/ / /
 // /____/_/  /_//____/   /____/_/_/ /_/ /_/\__,_/_/\__,_/\__/\____/_/
 //
-//                                                      SMS Associates 2023
+//                                                SMS Associates 2023-2024
 //
 
 #include <iostream>
@@ -13,11 +13,11 @@
 #include <thread>
 #include "AKML-lib/AKML.hpp"
 #include "Constants.hpp"
+#include "UtilityFunction.cpp"
 #include "Individual.hpp"
 #include "SocialMatrix.hpp"
+#include "OptimalMatrix.hpp"
 #include "AKML-lib/AgentBasedUtilities/CLInterface.hpp"
-
-bool is_number(const std::string& s) { return !s.empty() && std::find_if(s.begin(), s.end(), [](unsigned char c) { return !std::isdigit(c); }) == s.end(); }
 
 int main(int argc, const char * argv[]) {
     std::cout << "    _____ __  ________    _____ _                 __      __             \n";
@@ -30,11 +30,12 @@ int main(int argc, const char * argv[]) {
     
     std::size_t rounds = 1000;
     unsigned short int simulationsNb = 1;
+    bool shouldITryToFindOptimalGraph = false;
     
     auto CLOptionsTuple = std::make_tuple
         (akml::CLOption<std::size_t> (&rounds, "R", "rounds", "How many rounds?"),
          akml::CLOption<unsigned short int> (&simulationsNb, "S", "simuls", "How many simulations?"),
-         akml::CLOption<bool> (&SocialMatrix::SHOULD_I_LOG, "l", "log", "Should we log results?", true),
+         akml::CLOption<bool> (&shouldITryToFindOptimalGraph, "O", "optiGraph", "Should I compute optimal graph?"),
          akml::CLOption<unsigned short int> (&Individual::GREEDY_SHARE, "s", "greedyS", "Share of greedy individuals [0,100]"),
          akml::CLOption<unsigned short int> (&Individual::GREEDY_FREQ, "f", "greedyF", "Frequency of the greedy bonus [0,100]", 10),
          akml::CLOption<float> (&Individual::DEFAULT_DELTA, "D", "delta", "Utility parameter", 2),
@@ -43,6 +44,7 @@ int main(int argc, const char * argv[]) {
          akml::CLOption<bool> (&Individual::HETEROGENEOUS_P, "p", "htroP", "Enable/Disable the two groups of P", false),
          akml::CLOption<bool> (&SocialMatrix::COMPUTE_CLEARING, "c", "clearing", "Enable/Disable the clearing and decaying mechanism", true),
          akml::CLOption<bool> (&SocialMatrix::COMPUTE_CLUSTERING, "C", "clustering", "Enable/Disable the computing of clustering coefficients", false),
+         akml::CLOption<bool> (&SocialMatrix::SHOULD_I_LOG, "l", "log", "Should we log results?", true),
          akml::CLOption<std::string> (&SocialMatrix::GLOBAL_LOG_PREFIX, "L", "logPrefix", "Select a subfolder for registering logs"));
     
     try {
@@ -54,12 +56,21 @@ int main(int argc, const char * argv[]) {
     if (SocialMatrix::SHOULD_I_LOG)
         std::cout << "Log mode active. Files will be saved in " << std::filesystem::current_path() << "\n\n";
     
-    auto processGame = [&CLOptionsTuple](std::size_t rds) {
+    auto processGame = [&CLOptionsTuple, &shouldITryToFindOptimalGraph](std::size_t rds) {
         SocialMatrix sm;
         std::string logPath = sm.whereWillYouLog().first;
         std::string logId = sm.whereWillYouLog().second;
         auto start = std::chrono::high_resolution_clock::now();
             sm.initializeLinks();
+        if (shouldITryToFindOptimalGraph){
+            std::cout << "Computing the analytical optimal graph...\n";
+            OptimalMatrix optiMatComputer;
+            auto optiMat = optiMatComputer.compute(sm.asAdjacencyMatrix(), sm.getIndividuals());
+            akml::CSV_Saver<akml::FullMatrixSave<akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE>>> optimalAdjacencyMatrixTrackersManager;
+            optimalAdjacencyMatrixTrackersManager.addSave(optiMat);
+            optimalAdjacencyMatrixTrackersManager.saveToCSV(logPath + "SMS-Save-OptimalGraph-" + logId + ".csv", false);
+        }
+        
             #if GRAPH_SIZE < 50
                 std::cout << "\n A look to the initialization adjacency matrix : \n";
                 akml::cout_matrix(sm.asAdjacencyMatrix());
