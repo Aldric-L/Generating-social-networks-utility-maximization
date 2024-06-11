@@ -56,29 +56,26 @@ int main(int argc, const char * argv[]) {
     if (SocialMatrix::SHOULD_I_LOG)
         std::cout << "Log mode active. Files will be saved in " << std::filesystem::current_path() << "\n\n";
     
-    auto processGame = [&CLOptionsTuple, &shouldITryToFindOptimalGraph](std::size_t rds) {
+    auto processGame = [&CLOptionsTuple, &shouldITryToFindOptimalGraph](std::size_t rds, std::size_t id, std::size_t batchSize) {
         SocialMatrix sm;
         std::string logPath = sm.whereWillYouLog().first;
         std::string logId = sm.whereWillYouLog().second;
         auto start = std::chrono::high_resolution_clock::now();
             sm.initializeLinks();
-        if (shouldITryToFindOptimalGraph){
-            std::cout << "Computing the analytical optimal graph...\n";
-            OptimalMatrix optiMatComputer;
-            auto optiMat = optiMatComputer.compute(sm.asAdjacencyMatrix(), sm.getIndividuals());
-            akml::CSV_Saver<akml::FullMatrixSave<akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE>>> optimalAdjacencyMatrixTrackersManager;
-            optimalAdjacencyMatrixTrackersManager.addSave(optiMat);
-            optimalAdjacencyMatrixTrackersManager.saveToCSV(logPath + "SMS-Save-OptimalGraph-" + logId + ".csv", false);
-        }
+            if (shouldITryToFindOptimalGraph){
+                std::cout << "Simulation " << id << " / " << batchSize << ": Computing the analytical optimal graph...\n";
+                OptimalMatrix optiMatComputer;
+                auto optiMat = optiMatComputer.compute(sm.asAdjacencyMatrix(), sm.getIndividuals());
+                akml::CSV_Saver<akml::FullMatrixSave<akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE>>> optimalAdjacencyMatrixTrackersManager;
+                optimalAdjacencyMatrixTrackersManager.addSave(optiMat);
+                optimalAdjacencyMatrixTrackersManager.saveToCSV(logPath + "SMS-Save-OptimalGraph-" + logId + ".csv", false);
+            }
         
-            #if GRAPH_SIZE < 50
-                std::cout << "\n A look to the initialization adjacency matrix : \n";
-                akml::cout_matrix(sm.asAdjacencyMatrix());
-            #endif
+            std::cout << "Simulation " << id << " / " << batchSize << ": Processing simulation...\n";
             unsigned short int inactive_consecutive_rounds_counter(0);
             for (std::size_t i(0); i < rds; i++){
                     if (inactive_consecutive_rounds_counter == 3){
-                        std::cout << "\n\n\n Inactivity detected - Stopping generation at round " << i;
+                        std::cout << "Simulation " << id << " / " << batchSize << ": Inactivity detected - Stopping generation at round " << i << "\n";
                         break;
                     }
                     
@@ -87,16 +84,6 @@ int main(int argc, const char * argv[]) {
                     else
                         inactive_consecutive_rounds_counter=0;
             }
-            #if GRAPH_SIZE < 75
-                std::cout << "\n A look at the final adjacency matrix : \n";
-                akml::cout_matrix(sm.asAdjacencyMatrix());
-            
-                std::cout << "\n A look at the Binary adjacency matrix : \n";
-                akml::cout_matrix(sm.asBinaryAdjacencyMatrix());
-            
-                std::cout << "\n A look at the Dijkstra adjacency matrix : \n";
-                akml::cout_matrix(sm.computeDegreesOfSeparation());
-            #endif
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> duration = end - start;
         
@@ -120,8 +107,8 @@ int main(int argc, const char * argv[]) {
     workers.reserve(maxThreads);
     for (std::size_t s(0); s < simulationsNb;){
         for (unsigned int conc_s(0); s+conc_s < std::min((std::size_t)simulationsNb, s+maxThreads); conc_s++){
-            std::cout << "Processing simulation " << s+conc_s+1 << " / " << simulationsNb << "\n";
-            workers.emplace_back(std::ref(processGame), rounds);
+            std::cout << "Simulation " << s+conc_s+1 << " / " << simulationsNb << ": Initialization.\n";
+            workers.emplace_back(std::ref(processGame), rounds, s+conc_s+1, simulationsNb);
         }
         for (unsigned int conc_s(0); conc_s < workers.size(); conc_s++){
             if (workers[conc_s].joinable())

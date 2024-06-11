@@ -45,7 +45,7 @@ Individual::Individual(SocialMatrix& world, unsigned long int agentid) : kappa(D
     while((g = norm(gen)) > 1.8 || g < 0.1 || g==1){ g = norm(gen); }
     Individual::gamma = g+Individual::GAMMA_MEAN;
     
-    utilityFunc = new KZALUtility(g+Individual::GAMMA_MEAN, Individual::DEFAULT_KAPPA, Individual::DEFAULT_DELTA);
+    utilityFunc = new ALKYUtility(Individual::gamma, Individual::DEFAULT_KAPPA, Individual::DEFAULT_DELTA);
 }
 
 

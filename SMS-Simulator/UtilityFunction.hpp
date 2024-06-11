@@ -19,13 +19,13 @@ public:
     virtual ~UtilityFunction() = default;
 };
 
-class KZALUtility : public UtilityFunction {
+class ALKYUtility : public UtilityFunction {
 public:
     const float gamma;
     const float kappa;
     const float delta;
     
-    inline KZALUtility(float gamma, float kappa, float delta) : gamma(gamma), kappa(kappa), delta(delta) {};
+    inline ALKYUtility(float gamma, float kappa, float delta) : gamma(gamma), kappa(kappa), delta(delta) {};
     
     float function(const akml::DynamicMatrix<float>& affinityVector, const akml::DynamicMatrix<float>& weightsVector) const;
     float localDerivative(const float& affinityScore, const float& weight, const akml::DynamicMatrix<float>& weightsVector) const;

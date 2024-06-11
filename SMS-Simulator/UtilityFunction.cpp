@@ -7,7 +7,7 @@
 
 #include "UtilityFunction.hpp"
 
-float KZALUtility::function(const akml::DynamicMatrix<float>& affinityVector, const akml::DynamicMatrix<float>& weightsVector) const {
+float ALKYUtility::function(const akml::DynamicMatrix<float>& affinityVector, const akml::DynamicMatrix<float>& weightsVector) const {
     float LHS = akml::inner_product(weightsVector, affinityVector)*kappa;
     
     float RHS1 = 0;
@@ -22,11 +22,11 @@ float KZALUtility::function(const akml::DynamicMatrix<float>& affinityVector, co
     return LHS - RHS1 - RHS2;
 }
 
-float KZALUtility::localDerivative(const float& affinityScore, const float& weight, const akml::DynamicMatrix<float>& weightsVector) const {
+float ALKYUtility::localDerivative(const float& affinityScore, const float& weight, const akml::DynamicMatrix<float>& weightsVector) const {
     return affinityScore * kappa - ((gamma * std::pow(weight, gamma-1)) / std::pow(1 - std::pow(weight, gamma), 2)) - delta * std::pow(akml::sum_column(weightsVector), delta-1);
 }
 
-akml::DynamicMatrix<float> KZALUtility::derivative(const akml::DynamicMatrix<float>& affinityVector, const akml::DynamicMatrix<float>& weightsVector) const {
+akml::DynamicMatrix<float> ALKYUtility::derivative(const akml::DynamicMatrix<float>& affinityVector, const akml::DynamicMatrix<float>& weightsVector) const {
     akml::DynamicMatrix<float> gradient(weightsVector.getNRows(), 1);
     
     if (affinityVector.getNRows() != gradient.getNRows())

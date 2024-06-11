@@ -7,7 +7,7 @@
 
 #include "OptimalMatrix.hpp"
 
-akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> OptimalMatrix::compute(akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> adjacencyMatrix, const akml::Matrix<Individual*, GRAPH_SIZE, 1>& individuals) {
+akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> OptimalMatrix::compute(akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> adjacencyMatrix, const akml::Matrix<Individual*, GRAPH_SIZE, 1>& individuals, const std::size_t max_epochs, const double lr_moment1,const double lr_moment2, const double step_size, const double tolerance, const double epsilon) {
     
     // We first have to build the P_S Matrix
     std::vector<akml::Matrix<float, P_DIMENSION, 1>> P_S_temp(individuals.getNRows());
@@ -19,21 +19,14 @@ akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> OptimalMatrix::compute(akml::Matrix<
     for (std::size_t indiv(0); indiv < individuals.getNRows(); indiv++){
         akml::DynamicMatrix<float> P_prod (akml::matrix_product(akml::transpose(P_S), individuals[{indiv, 0}]->getP()));
         P_prod = P_prod * (1/(float)P_DIMENSION);
+        P_prod[{indiv, 0}] = 0.f;
         PSProdBuffer.push_back(std::move(P_prod));
     }
     
     //std::cout << "Before we start we are at: \n";
     //std::cout << computeObjectiveFunction(adjacencyMatrix, individuals);
     
-    // #############################################################################
-    // ############## ADAM Optimizer and gradient ascent
-    
-    const std::size_t max_epochs = 100000;
-    double lr_moment1 = 0.9;
-    double lr_moment2 = 0.999;
-    double step_size = 0.001;
-    double tolerance = 1e-6;
-    double epsilon=1e-8;
+    // ADAM Optimizer and gradient ascent
     std::size_t epochs(1);
 
     akml::DynamicMatrix<float> grad (GRAPH_SIZE*GRAPH_SIZE, 1);
@@ -45,7 +38,13 @@ akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> OptimalMatrix::compute(akml::Matrix<
     akml::DynamicMatrix<float> correctedSecondMoment(firstMoment);
                                                                             
     do {
-        grad = buildGlobalGradient(adjacencyMatrix, individuals);
+        try {
+            grad = buildGlobalGradient(adjacencyMatrix, individuals, tolerance);
+        }catch (...){
+            //std::cerr << "Stopping ADAM, convergence threshold reached (" << epochs << ").\n";
+            break;
+        }
+        
         firstMoment = lr_moment1 * firstMoment + (1.f - lr_moment1)*grad;
         secondMoment = lr_moment2 * secondMoment + (1.f - lr_moment2)*akml::hadamard_product(grad, grad);
             
@@ -59,26 +58,49 @@ akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> OptimalMatrix::compute(akml::Matrix<
         epochs++;
     }while (epochs < max_epochs);
     adjacencyMatrix.transform(sig);
-    //std::cout << "AlphaCorrected:\n" << correctedAdjacencyMatrix;
+    for (std::size_t i(0); i < adjacencyMatrix.getNRows(); i++)
+        adjacencyMatrix[{i,i}] = 0.f;
+    
     //std::cout << "\nResult:\n" << computeObjectiveFunction(adjacencyMatrix, individuals);
     return adjacencyMatrix;
     
 }
 
-akml::DynamicMatrix<float> OptimalMatrix::buildGlobalGradient(akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> adjacencyMatrix, const akml::Matrix<Individual*, GRAPH_SIZE, 1>& individuals) {
+akml::DynamicMatrix<float> OptimalMatrix::buildGlobalGradient(akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> adjacencyMatrix, const akml::Matrix<Individual*, GRAPH_SIZE, 1>& individuals, double tolerance) {
     akml::DynamicMatrix<float> finalGradient (GRAPH_SIZE*GRAPH_SIZE, 1);
     
     // We apply directly sigmoid on our local version of adjacency matrix to stick in the (0,1) interval
     adjacencyMatrix.transform(sig);
+    for (std::size_t i(0); i < adjacencyMatrix.getNRows(); i++)
+        adjacencyMatrix[{i,i}] = 0.f;
     
     for (std::size_t indiv(0); indiv < individuals.getNRows(); indiv++){
         akml::DynamicMatrix<float> localAlpha = akml::getRowAsColumn(adjacencyMatrix, indiv+1);
         akml::DynamicMatrix<float> localGrad = individuals[{indiv, 0}]->getUtilityFunction()->derivative(PSProdBuffer.at(indiv), localAlpha);
-        
+            
         localGrad = akml::hadamard_product(localGrad, akml::transform(localAlpha, sigPrime));
         
         std::copy(localGrad.getStorage(), localGrad.getStorageEnd(), finalGradient.getStorage() + GRAPH_SIZE*indiv);
     }
+    
+    // As the graph has to be symmetric, we need to sum gradients of both individuals
+    for (std::size_t indiv1(0); indiv1 < individuals.getNRows(); indiv1++){
+        for (std::size_t indiv2(indiv1+1); indiv2 < individuals.getNRows(); indiv2++){
+            *(finalGradient.getStorage() + GRAPH_SIZE*indiv1 + indiv2) += *(finalGradient.getStorage() + GRAPH_SIZE*indiv2 + indiv1);
+            *(finalGradient.getStorage() + GRAPH_SIZE*indiv2 + indiv1) = (indiv1 == indiv2) ? 0 : *(finalGradient.getStorage() + GRAPH_SIZE*indiv1 + indiv2);
+        }
+
+    }
+    
+    // Checking the convergence threshold
+    float max = -MAXFLOAT;
+    for (std::size_t i(0); i < GRAPH_SIZE*GRAPH_SIZE; i++)
+        if (std::abs(*(finalGradient.getStorage() + i)) > max)
+            max = std::abs(*(finalGradient.getStorage() + i));
+    
+    if (max < tolerance)
+        throw max;
+        
     return finalGradient;
 }
 
