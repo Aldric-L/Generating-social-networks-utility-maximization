@@ -49,6 +49,7 @@ class SocialMatrix {
         static inline bool COMPUTE_CLUSTERING = true;
         static inline bool COMPUTE_CLEARING = true;
         static inline std::string GLOBAL_LOG_PREFIX = "";
+        static inline unsigned short int UTILITY_COMPUTATION_INTERVAL = 10;
     
         std::size_t currentRound = 0;
         SocialMatrix();

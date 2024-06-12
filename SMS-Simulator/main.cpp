@@ -30,7 +30,7 @@ int main(int argc, const char * argv[]) {
     
     std::size_t rounds = 1000;
     unsigned short int simulationsNb = 1;
-    bool shouldITryToFindOptimalGraph = false;
+    bool shouldITryToFindOptimalGraph = true;
     
     auto CLOptionsTuple = std::make_tuple
         (akml::CLOption<std::size_t> (&rounds, "R", "rounds", "How many rounds?"),
@@ -44,6 +44,7 @@ int main(int argc, const char * argv[]) {
          akml::CLOption<bool> (&Individual::HETEROGENEOUS_P, "p", "htroP", "Enable/Disable the two groups of P", false),
          akml::CLOption<bool> (&SocialMatrix::COMPUTE_CLEARING, "c", "clearing", "Enable/Disable the clearing and decaying mechanism", true),
          akml::CLOption<bool> (&SocialMatrix::COMPUTE_CLUSTERING, "C", "clustering", "Enable/Disable the computing of clustering coefficients", false),
+         akml::CLOption<unsigned short int> (&SocialMatrix::UTILITY_COMPUTATION_INTERVAL, "u", "utFreq", "Frequency of the utility log"),
          akml::CLOption<bool> (&SocialMatrix::SHOULD_I_LOG, "l", "log", "Should we log results?", true),
          akml::CLOption<std::string> (&SocialMatrix::GLOBAL_LOG_PREFIX, "L", "logPrefix", "Select a subfolder for registering logs"));
     
@@ -68,7 +69,11 @@ int main(int argc, const char * argv[]) {
                 auto optiMat = optiMatComputer.compute(sm.asAdjacencyMatrix(), sm.getIndividuals());
                 akml::CSV_Saver<akml::FullMatrixSave<akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE>>> optimalAdjacencyMatrixTrackersManager;
                 optimalAdjacencyMatrixTrackersManager.addSave(optiMat);
+                optimalAdjacencyMatrixTrackersManager.addSave(optiMatComputer.exportAffinityBuffer());
                 optimalAdjacencyMatrixTrackersManager.saveToCSV(logPath + "SMS-Save-OptimalGraph-" + logId + ".csv", false);
+                akml::CSV_Saver<akml::FullMatrixSave<akml::DynamicMatrix<float>>> utilityTrackersManager;
+                utilityTrackersManager.addSave(optiMatComputer.computeObjectiveFunction(optiMat, sm.getIndividuals()));
+                utilityTrackersManager.saveToCSV(logPath + "SMS-Save-OptimalUtility-" + logId + ".csv", false);
             }
         
             std::cout << "Simulation " << id << " / " << batchSize << ": Processing simulation...\n";

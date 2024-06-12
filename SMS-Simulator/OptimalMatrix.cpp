@@ -112,9 +112,14 @@ void OptimalMatrix::followGradient(const akml::DynamicMatrix<float>& grad, akml:
         }
 }
 
-akml::DynamicMatrix<float> OptimalMatrix::computeObjectiveFunction(const akml::DynamicMatrix<float>& adjacencyMatrix, const akml::Matrix<Individual*, GRAPH_SIZE, 1>& individuals) {
+akml::DynamicMatrix<float> OptimalMatrix::computeObjectiveFunction(const akml::DynamicMatrix<float>& adjacencyMatrix, const akml::Matrix<Individual*, GRAPH_SIZE, 1>& individuals) const {
     akml::DynamicMatrix<float> utilities (GRAPH_SIZE, 1);
     for (std::size_t indiv(0); indiv < individuals.getNRows(); indiv++)
         utilities[{indiv, 0}] = individuals[{indiv, 0}]->getUtilityFunction()->function(PSProdBuffer.at(indiv),  akml::getRowAsColumn(adjacencyMatrix, indiv+1));
     return utilities;
+}
+
+akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> OptimalMatrix::exportAffinityBuffer() const{
+    akml::DynamicMatrix<float> tmp(PSProdBuffer);
+    return akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE>(tmp);
 }
