@@ -30,12 +30,13 @@ int main(int argc, const char * argv[]) {
     
     std::size_t rounds = 1000;
     unsigned short int simulationsNb = 1;
-    bool shouldITryToFindOptimalGraph = true;
+    bool shouldITryToFindOptimalGraph = false;
     
     auto CLOptionsTuple = std::make_tuple
         (akml::CLOption<std::size_t> (&rounds, "R", "rounds", "How many rounds?"),
          akml::CLOption<unsigned short int> (&simulationsNb, "S", "simuls", "How many simulations?"),
          akml::CLOption<bool> (&shouldITryToFindOptimalGraph, "O", "optiGraph", "Should I compute optimal graph?"),
+         akml::CLOption<unsigned short int> (&Individual::MEMORY_SIZE, "m", "memLength", "Length of the memory of past requests"),
          akml::CLOption<unsigned short int> (&Individual::GREEDY_SHARE, "s", "greedyS", "Share of greedy individuals [0,100]"),
          akml::CLOption<unsigned short int> (&Individual::GREEDY_FREQ, "f", "greedyF", "Frequency of the greedy bonus [0,100]", 10),
          akml::CLOption<float> (&Individual::DEFAULT_DELTA, "D", "delta", "Utility parameter", 2),

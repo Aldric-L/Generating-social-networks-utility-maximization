@@ -25,6 +25,7 @@ class Individual {
         akml::Matrix<float, P_DIMENSION, 1> P;
         SocialMatrix *world;
         UtilityFunction* utilityFunc;
+        std::deque<Individual*> memoryBuffer;
         //std::mt19937 gen;
     
         PSAndAlphaTuple buildPSAndAlpha (const akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1>& relations);
@@ -39,6 +40,7 @@ class Individual {
         static inline float DEFAULT_KAPPA = 10;
         static inline float GAMMA_MEAN = 9;
         static inline bool HETEROGENEOUS_P = true;
+        static inline unsigned short int MEMORY_SIZE = 0;
         
         bool is_greedy;
         float gamma;

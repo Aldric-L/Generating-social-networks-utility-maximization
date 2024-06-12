@@ -7,7 +7,7 @@
 
 #include "CMakeConsts.h"
 
-#define SMS_VERSION "0.2 11/06/24"
+#define SMS_VERSION "0.3 12/06/24"
 
 #include <stdio.h>
 #include <iostream>
@@ -23,6 +23,7 @@
 #include <random>
 #include <algorithm>
 #include <filesystem>
+#include <deque>
 
 #ifndef GRAPH_SIZE
     #define GRAPH_SIZE 20

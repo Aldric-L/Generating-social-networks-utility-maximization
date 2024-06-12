@@ -262,8 +262,10 @@ unsigned int SocialMatrix::processARound(std::size_t totalrounds) {
         inactions += nodei->takeAction() ? 0 : 1;
     }
     #if GRAPH_SIZE >= 100
-        if ((MODE_ECO_LOG && ((totalrounds != 0 && totalrounds > 100 && SocialMatrix::currentRound % totalrounds/10 == 0) || SocialMatrix::currentRound == 1))
-            || (!MODE_ECO_LOG && SocialMatrix::currentRound % UTILITY_COMPUTATION_INTERVAL == 0 ) ) {
+        if (
+            (MODE_ECO_LOG && ((totalrounds != 0 && totalrounds > 100 && SocialMatrix::currentRound % totalrounds/10 == 0) || SocialMatrix::currentRound == 1))
+            || (!MODE_ECO_LOG && ((totalrounds < 50 && (totalrounds%5==0 || totalrounds < 5)) || (totalrounds > 50 && SocialMatrix::currentRound % UTILITY_COMPUTATION_INTERVAL == 0) ) )
+            ) {
             //std::cout << "\n Computing utility: round " << SocialMatrix::currentRound << " / " << totalrounds << " thread " << std::this_thread::get_id();
             for (std::size_t i(0); i < GRAPH_SIZE; i++){
                 SocialMatrix::utilityTrackersManager.addSave(SocialMatrix::currentRound, SocialMatrix::getIndividual(i)->agentid, SocialMatrix::getIndividual(i)->computeUtility(nullptr));

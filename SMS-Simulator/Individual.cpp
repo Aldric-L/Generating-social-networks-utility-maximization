@@ -317,7 +317,23 @@ std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individua
         akml::cout_matrix(grad);
     #endif
     if (target == nullptr){
-        std::size_t max_i = akml::arg_max(grad, true);
+        std::size_t max_i = 0;
+        if (MEMORY_SIZE > 0 && memoryBuffer.size() > 0){
+            float lmax = -MAXFLOAT;
+            for (std::size_t i(0); i < grad.getNRows(); i++){
+                if (std::abs(grad[{i,0}]) > lmax) {
+                    if (std::find(memoryBuffer.begin(), memoryBuffer.end(), PS_Alpha.beta[{i, 0}]) != memoryBuffer.end()){
+                        grad[{i,0}] = 0.f;
+                    }else{
+                        max_i = i;
+                        lmax = std::abs(grad[{i,0}]);
+                    }
+                }
+            }
+        }else {
+            max_i = akml::arg_max(grad, true);
+        }
+        
         if (std::abs(grad(max_i+1, 1)) < MIN_LINK_WEIGHT){
             #if GRAPH_SIZE < 100
             std::cout << "\nWant to do an unsignifiant action. Aborted.";
@@ -338,6 +354,11 @@ std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individua
         //std::cout << "We verifiy true_eta : " << true_eta(max_i+1, 1)->first << " - " << true_eta(max_i+1, 1)->second << " - " << true_eta(max_i+1, 1)->weight << "\n";
         #endif
         
+        if (MEMORY_SIZE > 0){
+            memoryBuffer.push_front(PS_Alpha.beta[{max_i, 0}]);
+            if (memoryBuffer.size() > MEMORY_SIZE)
+                memoryBuffer.pop_back();
+        }
         SocialMatrix::Link newlinkwanted (true_eta(max_i+1, 1)->first, true_eta(max_i+1, 1)->second, mov);
         
         return std::make_tuple(true_eta(max_i+1, 1), PS_Alpha.beta(max_i+1, 1), newlinkwanted, (grad(max_i+1, 1) <= 0));
