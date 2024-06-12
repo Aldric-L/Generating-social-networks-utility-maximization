@@ -7,7 +7,7 @@
 #include "SocialMatrix.hpp"
 #include "Individual.hpp"
 
-SocialMatrix::SocialMatrix() : links(LINKS_NB){
+SocialMatrix::SocialMatrix() : links(LINKS_NB), gen(std::random_device{}()){
     edgeTrackersManager.setParameterNames({{ "round", "vertex1", "vertex2", "old_weight", "new_weight", "accepted", "forced" }});
     utilityTrackersManager.setParameterNames({{ "round", "agentid", "utility" }});
     verticesTrackersManager.setParameterNames({{ "round", "agentid", "gamma", "isgreedy", "meandist", "vardist", "maxdist", "P" }});
@@ -72,8 +72,6 @@ SocialMatrix::~SocialMatrix(){
 void SocialMatrix::initializeLinks(){
     std::size_t link_i(0);
     
-    std::random_device rd;
-    std::mt19937 gen(rd());
     std::uniform_int_distribution<unsigned short int> distribution(1,GRAPH_SIZE);
     
     for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
@@ -186,7 +184,7 @@ std::vector<SocialMatrix::Link> SocialMatrix::getIndividualScope(Individual* ind
 }
 
 // Actually, I think this method should not exists : be optimized, use pointers.
-void SocialMatrix::editLink(Individual* indiv1, Individual* indiv2, float newWeight, bool accepted, bool forced) {
+void SocialMatrix::editLink(const Individual* indiv1, const Individual* indiv2, const float newWeight, bool accepted, bool forced) {
     if (indiv1 == indiv2 || indiv1 == nullptr || indiv2 == nullptr)
         throw std::invalid_argument("Attempting to edit a non-consistent link");
     
@@ -199,7 +197,7 @@ void SocialMatrix::editLink(Individual* indiv1, Individual* indiv2, float newWei
     }
 }
 
-void SocialMatrix::editLink(SocialMatrix::Link* link, float newWeight, bool accepted, bool forced) {
+void SocialMatrix::editLink(SocialMatrix::Link* link, const float newWeight, bool accepted, bool forced) {
     if (link == nullptr)
         throw std::invalid_argument("Attempting to edit a non-consistent link");
     
@@ -243,8 +241,6 @@ unsigned int SocialMatrix::processARound(std::size_t totalrounds) {
     std::uniform_int_distribution<std::size_t> distribution(0,GRAPH_SIZE-1);
     unsigned int inactions(0);
     
-    std::random_device rd;
-    std::mt19937 gen(rd());
     std::size_t start_indiv = distribution(gen);
     
     for (std::size_t i(start_indiv); i < GRAPH_SIZE; i++){
@@ -297,7 +293,7 @@ unsigned int SocialMatrix::processARound(std::size_t totalrounds) {
     return inactions;
 }
 
-akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> SocialMatrix::asAdjacencyMatrix(){
+akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> SocialMatrix::asAdjacencyMatrix() const{
     akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> output;
     for (std::size_t l(0); l<LINKS_NB; l++){
         output(SocialMatrix::links[l].first->agentid+1, SocialMatrix::links[l].second->agentid+1) = SocialMatrix::links[l].weight;
@@ -306,7 +302,7 @@ akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> SocialMatrix::asAdjacencyMatrix(){
     return output;
 }
 
-akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> SocialMatrix::asBinaryAdjacencyMatrix(akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE>* adjacencymatrix){
+akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> SocialMatrix::asBinaryAdjacencyMatrix(akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE>* adjacencymatrix) const{
     akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> localmatrix;
     if (adjacencymatrix != nullptr){
         for (std::size_t i (0); localmatrix.getStorage() != localmatrix.getStorageEnd(); i++){
@@ -321,7 +317,7 @@ akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> SocialMatrix::asBinaryAdjacencyMatrix
     return localmatrix;
 }
 
-akml::Matrix<std::size_t, GRAPH_SIZE, GRAPH_SIZE> SocialMatrix::computeDegreesOfSeparation(akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE>* binaryadjacencymatrix){
+akml::Matrix<std::size_t, GRAPH_SIZE, GRAPH_SIZE> SocialMatrix::computeDegreesOfSeparation(akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE>* binaryadjacencymatrix) const{
     bool bam_td = false;
     if (binaryadjacencymatrix == nullptr){
         binaryadjacencymatrix = new akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE>;
@@ -340,7 +336,7 @@ akml::Matrix<std::size_t, GRAPH_SIZE, GRAPH_SIZE> SocialMatrix::computeDegreesOf
     return result;
 }
 
-akml::Matrix<float, GRAPH_SIZE+1, 1> SocialMatrix::computeClusteringCoefficients(akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE>* binaryadjacencymatrix){
+akml::Matrix<float, GRAPH_SIZE+1, 1> SocialMatrix::computeClusteringCoefficients(akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE>* binaryadjacencymatrix) const{
     bool bam_td = false;
     if (binaryadjacencymatrix == nullptr){
         binaryadjacencymatrix = new akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE>;
@@ -391,6 +387,6 @@ akml::Matrix<float, GRAPH_SIZE+1, 1> SocialMatrix::computeClusteringCoefficients
 }
 
 
-std::pair<std::string, std::string> SocialMatrix::whereWillYouLog() {
+std::pair<std::string, std::string> SocialMatrix::whereWillYouLog() const {
     return std::make_pair(logPath, logID);
 }

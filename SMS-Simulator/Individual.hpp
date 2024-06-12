@@ -23,10 +23,10 @@ class Individual {
         };
     
         akml::Matrix<float, P_DIMENSION, 1> P;
-        SocialMatrix *world;
-        UtilityFunction* utilityFunc;
+        SocialMatrix *const world;
+        UtilityFunction *utilityFunc;
         std::deque<Individual*> memoryBuffer;
-        //std::mt19937 gen;
+        std::mt19937 gen;
     
         PSAndAlphaTuple buildPSAndAlpha (const akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1>& relations);
         akml::DynamicMatrix<float> computeUtilityGrad(akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1>& relations, PSAndAlphaTuple& PS_Alpha);
@@ -46,7 +46,7 @@ class Individual {
         float gamma;
         float delta;
         float kappa;
-        unsigned long int agentid;
+        const unsigned long int agentid;
     
 		Individual(SocialMatrix& world, unsigned long int agentid);
         ~Individual();

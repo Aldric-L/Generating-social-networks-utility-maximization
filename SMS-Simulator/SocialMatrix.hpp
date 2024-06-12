@@ -40,7 +40,7 @@ class SocialMatrix {
         akml::CSV_Saver<VerticesSaveTrackerType> verticesTrackersManager;
         akml::CSV_Saver<ClusteringSaveTrackerType> clusteringTrackersManager;
         akml::CSV_Saver<FinalSaveTrackerType> finalAdjacencyMatrixTrackersManager;
-        //std::mt19937 gen;
+        std::mt19937 gen;
         std::string logPath = "";
         std::string logID = "";
 
@@ -60,14 +60,14 @@ class SocialMatrix {
         akml::Matrix<Individual*, GRAPH_SIZE, 1> getIndividuals();
         Individual* getIndividual(const std::size_t indiv_id);
         std::vector<SocialMatrix::Link> getIndividualScope(Individual* indiv);
-        void editLink(Individual* indiv1, Individual* indiv2, float newWeight, bool accepted=true, bool forced=false);
-        void editLink(SocialMatrix::Link* link, float newWeight, bool accepted=true, bool forced=false);
+        void editLink(const Individual* indiv1, const Individual* indiv2, const float newWeight, bool accepted=true, bool forced=false);
+        void editLink(SocialMatrix::Link* link, const float newWeight, bool accepted=true, bool forced=false);
         unsigned int processARound(std::size_t totalrounds=0);
-        akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> asAdjacencyMatrix();
-        akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> asBinaryAdjacencyMatrix(akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE>* adjacencymatrix = nullptr);
-        akml::Matrix<std::size_t, GRAPH_SIZE, GRAPH_SIZE> computeDegreesOfSeparation(akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE>* binaryadjacencymatrix = nullptr);
-        akml::Matrix<float, GRAPH_SIZE+1, 1> computeClusteringCoefficients(akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE>* binaryadjacencymatrix = nullptr);
-        std::pair<std::string, std::string> whereWillYouLog();
+        akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> asAdjacencyMatrix() const;
+        akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> asBinaryAdjacencyMatrix(akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE>* adjacencymatrix = nullptr) const;
+        akml::Matrix<std::size_t, GRAPH_SIZE, GRAPH_SIZE> computeDegreesOfSeparation(akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE>* binaryadjacencymatrix = nullptr) const;
+        akml::Matrix<float, GRAPH_SIZE+1, 1> computeClusteringCoefficients(akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE>* binaryadjacencymatrix = nullptr) const;
+        std::pair<std::string, std::string> whereWillYouLog() const;
 };
 
  /* SocialMatrix_hpp */

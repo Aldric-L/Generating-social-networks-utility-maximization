@@ -14,9 +14,7 @@
  * The parameters gamma, is_greedy are random (N(9, 0.35) and U([1, 100-GREEDY_SHARE])
  * Delta is fixed to 2
  */
-Individual::Individual(SocialMatrix& world, unsigned long int agentid) : kappa(DEFAULT_KAPPA), delta(DEFAULT_DELTA), world(&world), agentid(agentid){
-    std::random_device rd;
-    std::mt19937 gen(rd());
+Individual::Individual(SocialMatrix& world, unsigned long int agentid) : kappa(DEFAULT_KAPPA), delta(DEFAULT_DELTA), world(&world), agentid(agentid), gen(std::random_device{}()){
     std::uniform_int_distribution<unsigned short int> distribution(0,1);
     std::size_t sum = 0;
     
@@ -245,8 +243,6 @@ std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individua
     // If greedy we select create a new scope entry
     long long int greedy_target (-1);
     if (Individual::is_greedy){
-        std::random_device rd;
-        std::mt19937 gen(rd());
         std::uniform_int_distribution<unsigned short int> distribution(0,GRAPH_SIZE-2);
         greedy_target = distribution(gen);
         greedy_target = (((greedy_target+1)/(GRAPH_SIZE-1))*100 < Individual::GREEDY_FREQ) ? distribution(gen) : -1;
