@@ -21,9 +21,11 @@ class SocialMatrix {
             Individual* first;
             Individual* second;
             float weight;
+            float compatibility = -MAXFLOAT;
             
             inline Link() {};
-            inline Link(Individual* first, Individual* second, float weight) : first(first), second(second), weight(weight) {};
+            inline Link(Individual* first, Individual* second, float weight, float compatibility) : first(first), second(second), weight(weight), compatibility(compatibility) {};
+            Link(Individual* first, Individual* second, float weight);
         };
         
     protected:
@@ -68,6 +70,7 @@ class SocialMatrix {
         akml::Matrix<std::size_t, GRAPH_SIZE, GRAPH_SIZE> computeDegreesOfSeparation(akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE>* binaryadjacencymatrix = nullptr) const;
         akml::Matrix<float, GRAPH_SIZE+1, 1> computeClusteringCoefficients(akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE>* binaryadjacencymatrix = nullptr) const;
         std::pair<std::string, std::string> whereWillYouLog() const;
+        inline std::mt19937& getRandomGen() { return gen; }
 };
 
  /* SocialMatrix_hpp */

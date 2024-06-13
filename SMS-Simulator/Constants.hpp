@@ -7,7 +7,7 @@
 
 #include "CMakeConsts.h"
 
-#define SMS_VERSION "0.3 12/06/24"
+#define SMS_VERSION "0.4 13/06/24"
 
 #include <stdio.h>
 #include <iostream>
@@ -33,7 +33,6 @@
     #define MAX_THREADS_USAGE 85
 #endif
 
-#define P_DIMENSION 100
 #define MODE_ECO_LOG 0
 #define MODE_FOLDER_LOG 1
 

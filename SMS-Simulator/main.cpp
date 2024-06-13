@@ -36,6 +36,8 @@ int main(int argc, const char * argv[]) {
         (akml::CLOption<std::size_t> (&rounds, "R", "rounds", "How many rounds?"),
          akml::CLOption<unsigned short int> (&simulationsNb, "S", "simuls", "How many simulations?"),
          akml::CLOption<bool> (&shouldITryToFindOptimalGraph, "O", "optiGraph", "Should I compute optimal graph?"),
+         akml::CLOption<unsigned short int> (&OptimalMatrix::MAX_PRECISION, "op", "optiPrecision", "Precision of the optimal graph 1e{-x}?"),
+         akml::CLOption<unsigned short int> (&Individual::P_DIMENSION, "P", "dimP", "Dimension of the vector of personnality"),
          akml::CLOption<unsigned short int> (&Individual::MEMORY_SIZE, "m", "memLength", "Length of the memory of past requests"),
          akml::CLOption<unsigned short int> (&Individual::GREEDY_SHARE, "s", "greedyS", "Share of greedy individuals [0,100]"),
          akml::CLOption<unsigned short int> (&Individual::GREEDY_FREQ, "f", "greedyF", "Frequency of the greedy bonus [0,100]", 10),
@@ -80,7 +82,7 @@ int main(int argc, const char * argv[]) {
             std::cout << "Simulation " << id << " / " << batchSize << ": Processing simulation...\n";
             unsigned short int inactive_consecutive_rounds_counter(0);
             for (std::size_t i(0); i < rds; i++){
-                    if (inactive_consecutive_rounds_counter == 3){
+                    if (inactive_consecutive_rounds_counter == 3 + Individual::MEMORY_SIZE){
                         std::cout << "Simulation " << id << " / " << batchSize << ": Inactivity detected - Stopping generation at round " << i << "\n";
                         break;
                     }
@@ -100,7 +102,6 @@ int main(int argc, const char * argv[]) {
             std::cout.rdbuf(cout.rdbuf());
             akml::CLManager::printOptionsValues(false, CLOptionsTuple);
             std::cout << "--agentsNb=" << GRAPH_SIZE << "\n";
-            std::cout << "--PDimension=" << P_DIMENSION << "\n";
             std::cout << "--executionTime=" << duration.count() << "\n";
             std::cout << "--SMSVersion=" << SMS_VERSION << "\n";
             std::cout.rdbuf(coutbuf);

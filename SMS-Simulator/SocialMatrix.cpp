@@ -12,18 +12,17 @@ SocialMatrix::SocialMatrix() : links(LINKS_NB), gen(std::random_device{}()){
     utilityTrackersManager.setParameterNames({{ "round", "agentid", "utility" }});
     verticesTrackersManager.setParameterNames({{ "round", "agentid", "gamma", "isgreedy", "meandist", "vardist", "maxdist", "P" }});
 
-    for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
+    for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++)
         individuals[{indiv,0}] = new Individual(*this, indiv);
-    }
     
     std::size_t link_i(0);
     for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
         for (std::size_t indiv_t(0); indiv_t<indiv; indiv_t++){
-            Link l;
-            l.first = individuals[{indiv,0}];
-            l.second = individuals[{indiv_t,0}];
-            l.weight = 0.f;
-            SocialMatrix::links[link_i] = l;
+            SocialMatrix::links[link_i] = Link (
+                                                individuals[{indiv,0}],
+                                                individuals[{indiv_t,0}],
+                                                0.f,
+                                                akml::inner_product(individuals[{indiv,0}]->getP(), individuals[{indiv_t,0}]->getP()) / Individual::P_DIMENSION    );
             link_i++;
         }
     }
@@ -45,7 +44,7 @@ SocialMatrix::~SocialMatrix(){
         akml::Matrix<std::size_t, GRAPH_SIZE, 1> dijkstra_distance_mat;
         for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
             std::string p = "";
-            for (std::size_t i(0); i < P_DIMENSION; i++){
+            for (std::size_t i(0); i < Individual::P_DIMENSION; i++){
                 p.push_back( char( individuals[{indiv,0}]->getP()(i+1, 1) + 48) );
             }
             dijkstra_distance_mat = akml::dijkstra_distance_algorithm(binaryadjacencymatrix, indiv);
@@ -64,10 +63,14 @@ SocialMatrix::~SocialMatrix(){
         SocialMatrix::finalAdjacencyMatrixTrackersManager.saveToCSV(logPath + "SMS-Save-AdjacencyMatrix-" + logID + ".csv", false);
         
     }
-    for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
+    for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++)
         delete individuals[{indiv,0}];
-    }
 }
+
+SocialMatrix::Link::Link(Individual* first, Individual* second, float weight) : first(first), second(second), weight(weight) {
+    if (first != nullptr && second != nullptr)
+        compatibility = akml::inner_product(first->getP(), second->getP()) / Individual::P_DIMENSION;
+};
 
 void SocialMatrix::initializeLinks(){
     std::size_t link_i(0);
@@ -91,7 +94,7 @@ void SocialMatrix::initializeLinks(){
         akml::Matrix<std::size_t, GRAPH_SIZE, 1> dijkstra_distance_mat;
         for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
             std::string p = "";
-            for (int i(0); i < P_DIMENSION; i++){
+            for (int i(0); i < Individual::P_DIMENSION; i++){
                 p.push_back( char( individuals[{indiv,0}]->getP()(i+1, 1) + 48) );
             }
             dijkstra_distance_mat = akml::dijkstra_distance_algorithm(binaryadjacencymatrix, indiv);
@@ -166,6 +169,7 @@ std::vector<SocialMatrix::Link> SocialMatrix::getIndividualScope(Individual* ind
                         l.first = indiv;
                         l.second = target1;
                         l.weight = linksofTarget[{level1, 0}]->weight * linksofIndividual[{level0, 0}]->weight;
+                        l.compatibility = akml::inner_product(indiv->getP(), target1->getP()) / Individual::P_DIMENSION;
                         bool redundant = false;
                         for (int icheck(0); icheck < scope.size(); icheck++){
                             if ((scope[icheck].first == l.first && scope[icheck].second == l.second)
@@ -200,10 +204,7 @@ void SocialMatrix::editLink(const Individual* indiv1, const Individual* indiv2, 
 void SocialMatrix::editLink(SocialMatrix::Link* link, const float newWeight, bool accepted, bool forced) {
     if (link == nullptr)
         throw std::invalid_argument("Attempting to edit a non-consistent link");
-    
-    //if (!forced && newWeight == 0 && link->weight ==0)
-        //return;
-    
+
     // We truly forbid insignificant moves that are inflating the log and keeping the simulation running forever
     if (!forced && accepted && newWeight > 0 && newWeight < MIN_LINK_WEIGHT){
         if (newWeight < link->weight){
@@ -211,7 +212,7 @@ void SocialMatrix::editLink(SocialMatrix::Link* link, const float newWeight, boo
             link->weight = newWeight;
         }
         else{
-            std::cout << "Forbidden link: " << link->weight << " - " << newWeight <<" \n";
+            std::cerr << "Forbidden link: " << link->weight << " - " << newWeight <<" \n";
         }
         return;
     }
@@ -284,10 +285,10 @@ unsigned int SocialMatrix::processARound(std::size_t totalrounds) {
     #endif
     
     #if GRAPH_SIZE >= 100
-    if (SocialMatrix::currentRound % 100 == 0){
+    /*if (SocialMatrix::currentRound % 100 == 0){
         SocialMatrix::edgeTrackersManager.bufferize(false);
         SocialMatrix::utilityTrackersManager.bufferize(false);
-    }
+    }*/
     #endif
     SocialMatrix::currentRound++;
     return inactions;

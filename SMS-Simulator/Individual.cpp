@@ -14,23 +14,22 @@
  * The parameters gamma, is_greedy are random (N(9, 0.35) and U([1, 100-GREEDY_SHARE])
  * Delta is fixed to 2
  */
-Individual::Individual(SocialMatrix& world, unsigned long int agentid) : kappa(DEFAULT_KAPPA), delta(DEFAULT_DELTA), world(&world), agentid(agentid), gen(std::random_device{}()){
+Individual::Individual(SocialMatrix& world, unsigned long int agentid) : kappa(DEFAULT_KAPPA), delta(DEFAULT_DELTA), world(&world), agentid(agentid), P(Individual::P_DIMENSION, 1)/*, gen(std::random_device{}())*/{
     std::uniform_int_distribution<unsigned short int> distribution(0,1);
     std::size_t sum = 0;
-    
     if (Individual::HETEROGENEOUS_P){
         std::uniform_int_distribution<unsigned short int> inner_distribution(0,10);
-        for (std::size_t i(0); i < P_DIMENSION; i++){
-            if (distribution(gen)==1)
-                Individual::P(i+1,1) = (inner_distribution(gen)>3) ? 1 : 0;
+        for (std::size_t i(0); i < Individual::P_DIMENSION; i++){
+            if (distribution(this->world->getRandomGen())==1)
+                Individual::P(i+1,1) = (inner_distribution(this->world->getRandomGen())>3) ? 1 : 0;
             else
-                Individual::P(i+1,1) = (inner_distribution(gen)>6) ? 1 : 0;
-            sum += (distribution(gen)==1) ? 1 : 0;
+                Individual::P(i+1,1) = (inner_distribution(this->world->getRandomGen())>6) ? 1 : 0;
+            sum += (distribution(this->world->getRandomGen())==1) ? 1 : 0;
         }
     }else {
-        for (std::size_t i(0); i < P_DIMENSION; i++){
-            Individual::P(i+1,1) = (distribution(gen)==1) ? 1 : 0;
-            sum += (distribution(gen)==1) ? 1 : 0;
+        for (std::size_t i(0); i < Individual::P_DIMENSION; i++){
+            Individual::P(i+1,1) = (distribution(this->world->getRandomGen())==1) ? 1 : 0;
+            sum += (distribution(this->world->getRandomGen())==1) ? 1 : 0;
         }
     }
     if (sum >= (100 - Individual::GREEDY_SHARE))
@@ -40,7 +39,7 @@ Individual::Individual(SocialMatrix& world, unsigned long int agentid) : kappa(D
     
     float g = 0;
     std::normal_distribution<float> norm(1,0.35);
-    while((g = norm(gen)) > 1.8 || g < 0.1 || g==1){ g = norm(gen); }
+    while((g = norm(this->world->getRandomGen())) > 1.8 || g < 0.1 || g==1){ g = norm(this->world->getRandomGen()); }
     Individual::gamma = g+Individual::GAMMA_MEAN;
     
     utilityFunc = new ALKYUtility(Individual::gamma, Individual::DEFAULT_KAPPA, Individual::DEFAULT_DELTA);
@@ -50,11 +49,6 @@ Individual::Individual(SocialMatrix& world, unsigned long int agentid) : kappa(D
 Individual::~Individual(){
     delete utilityFunc;
 }
-
-akml::Matrix<float, P_DIMENSION, 1>& Individual::getP() {
-	return Individual::P;
-}
-
 
 /*
  * Relations and scope are evaluated in the SocialMatrix class, the individual does not compute them directly
@@ -81,7 +75,9 @@ Individual::PSAndAlphaTuple Individual::buildPSAndAlpha(const akml::Matrix<Socia
         if ((relations)[{i,0}]->weight > 0)
             effectiveRelationCount++;
     
-    std::vector<akml::Matrix<float, P_DIMENSION, 1>> P_S_temp(effectiveRelationCount);
+    //std::vector<akml::Matrix<float, P_DIMENSION, 1>> P_S_temp(effectiveRelationCount);
+    // Compatibility matrix
+    akml::DynamicMatrix<float> P_prod (effectiveRelationCount, 1);
     // Weights matrix
     akml::DynamicMatrix<float> alpha (effectiveRelationCount, 1);
     // Pointers to individual matrix
@@ -93,19 +89,22 @@ Individual::PSAndAlphaTuple Individual::buildPSAndAlpha(const akml::Matrix<Socia
     for (std::size_t i(0); i < GRAPH_SIZE-1; i++){
         if (relations[{i,0}]->weight > 0){
             if (relations[{i,0}]->first == this){
-                P_S_temp[internIncrement] = relations[{i,0}]->second->getP();
+                //P_S_temp[internIncrement] = relations[{i,0}]->second->getP();
                 beta(internIncrement+1, 1) = relations[{i,0}]->second;
             }else {
-                P_S_temp[internIncrement] = relations[{i,0}]->first->getP();
+                //P_S_temp[internIncrement] = relations[{i,0}]->first->getP();
                 beta(internIncrement+1, 1) = relations[{i,0}]->first;
             }
             eta(internIncrement+1, 1) = relations[{i,0}];
             alpha(internIncrement+1, 1) = relations[{i,0}]->weight;
+            P_prod(internIncrement+1, 1) = relations[{i,0}]->compatibility;
+            if (relations[{i,0}]->compatibility == -1)
+                throw std::runtime_error("Compatibility not properly stored in the relation.");
             internIncrement++;
         }
     }
-    akml::DynamicMatrix<float> P_S (P_S_temp);
-    return { .P_S = P_S, .alpha = alpha, .beta = beta, .eta = eta};
+    //akml::DynamicMatrix<float> P_S (P_S_temp);
+    return { /*.P_S = P_S,*/ .P_prod = P_prod, .alpha = alpha, .beta = beta, .eta = eta};
 }
 
 float Individual::computeUtility(akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1>* relations) {
@@ -119,7 +118,7 @@ float Individual::computeUtility(akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1,
     for (std::size_t i(0); i < GRAPH_SIZE-1; i++){
         if ((*relations)[{i,0}]->weight > 0){
             // We clean relations that are far too weak
-            if ((*relations)[{i,0}]->weight < 0.001)
+            if ((*relations)[{i,0}]->weight < MIN_LINK_WEIGHT)
                 (*relations)[{i,0}]->weight = 0;
             else
                 effectiveRelationCount++;
@@ -133,41 +132,21 @@ float Individual::computeUtility(akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1,
         #endif
         if (rel_td)
             delete relations;
-        return 0;
+        return 0.f;
     }
     
-    std::vector<akml::Matrix<float, P_DIMENSION, 1>> P_S_temp (effectiveRelationCount);
     akml::DynamicMatrix<float> alpha (effectiveRelationCount, 1);
-    
-    /*float RHS1 = 0;
-    float RHS2 = 0;*/
+    akml::DynamicMatrix<float> P_prod(effectiveRelationCount, 1);
 
     std::size_t internIncrement (0);
     for (std::size_t i(0); i < GRAPH_SIZE-1; i++){
         if ((*relations)[{i,0}]->weight > 0){
-            if ((*relations)[{i,0}]->first == this){
-                (P_S_temp)[internIncrement] = (*relations)[{i,0}]->second->getP();
-            }else {
-                (P_S_temp)[internIncrement] = (*relations)[{i,0}]->first->getP();
-            }
-            /*float alpha_pow_gamma = std::pow( (*relations)[{i,0}]->weight, Individual::gamma );
-            if (alpha_pow_gamma != 1)
-                RHS1 += ( alpha_pow_gamma ) / (1 - alpha_pow_gamma);
-            RHS2 += (*relations)[{i,0}]->weight;
-            */
+            P_prod(internIncrement+1, 1) = (*relations)[{i,0}]->compatibility;
             alpha(internIncrement+1, 1) = (*relations)[{i,0}]->weight;
             internIncrement++;
         }
-        
     }
-    //RHS2 = std::pow(RHS2, Individual::delta);
-    
-    akml::DynamicMatrix<float> P_S (P_S_temp);
-    akml::DynamicMatrix<float> P_prod (akml::matrix_product(akml::transpose(P_S), Individual::P));
-    P_prod = P_prod * (1/(float)P_DIMENSION);
-    
-    //float LHS = akml::inner_product(alpha, std::move(P_prod))*kappa/P_DIMENSION;
-    
+        
     #if GRAPH_SIZE < 100
     std::cout << "\nUtility (" << agentid << " / " << GRAPH_SIZE << ") : LHS=" << LHS << " RHS=" << RHS1+RHS2 << " Total=" << LHS-(RHS1+RHS2) << "(Gamma=" << Individual::gamma << ")";
     #endif
@@ -179,32 +158,9 @@ float Individual::computeUtility(akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1,
 }
 
 akml::DynamicMatrix<float> Individual::computeUtilityGrad(akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1>& relations, Individual::PSAndAlphaTuple& PS_Alpha) {
-    akml::DynamicMatrix<float> P_prod (akml::matrix_product(akml::transpose(PS_Alpha.P_S), this->P));
-    P_prod = P_prod * (1/(float)P_DIMENSION);
-    
-    /*akml::DynamicMatrix<float> Alpha_temp (PS_Alpha.alpha);
-    akml::DynamicMatrix<float> grad (PS_Alpha.alpha.getNRows(), PS_Alpha.alpha.getNColumns());
-    
-    P_prod.transform([&kappa = kappa](float val) { return (val*kappa); });
-    
-    float scalaralpha = 0;
-    for (std::size_t line(1); line <= Alpha_temp.getNRows(); line++){
-        scalaralpha += Alpha_temp(line, 1);
-    }
-    if (scalaralpha != 0)
-        scalaralpha = std::pow(scalaralpha, (Individual::delta-1))*Individual::delta;
-    
-    Alpha_temp.transform([this, &scalaralpha](float val) {
-        if (val == 0)
-            return scalaralpha;
-        float alpha_pow_gamma = std::pow( val, Individual::gamma );
-        if (alpha_pow_gamma == 1)
-            return scalaralpha;
-        
-        return (float)( ( Individual::gamma * std::pow( val, (Individual::gamma-1) ) ) / ( std::pow(1 - alpha_pow_gamma, 2) ) ) + scalaralpha;
-    });
-    grad = P_prod - Alpha_temp;*/
-    akml::DynamicMatrix<float> grad = utilityFunc->derivative(P_prod, PS_Alpha.alpha);
+    //akml::DynamicMatrix<float> P_prod (akml::matrix_product(akml::transpose(PS_Alpha.P_S), this->P));
+    //P_prod = P_prod * (1/(float)P_DIMENSION);
+    akml::DynamicMatrix<float> grad = utilityFunc->derivative(PS_Alpha.P_prod, PS_Alpha.alpha);
     
     float maxgrad = akml::max(grad);
     if (maxgrad > 1){
@@ -244,8 +200,9 @@ std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individua
     long long int greedy_target (-1);
     if (Individual::is_greedy){
         std::uniform_int_distribution<unsigned short int> distribution(0,GRAPH_SIZE-2);
-        greedy_target = distribution(gen);
-        greedy_target = (((greedy_target+1)/(GRAPH_SIZE-1))*100 < Individual::GREEDY_FREQ) ? distribution(gen) : -1;
+        greedy_target = distribution(this->world->getRandomGen());
+        if (Individual::GREEDY_FREQ < 100)
+            greedy_target = (((greedy_target+1)/(GRAPH_SIZE-1))*100 < Individual::GREEDY_FREQ) ? distribution(this->world->getRandomGen()) : -1;
     }
     
     
@@ -280,6 +237,9 @@ std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individua
         #if GRAPH_SIZE < 100
         std::cout << "\nWant to take action but no individuals are in scope. Aborted.";
         #endif
+        for (std::size_t rel(0); rel < GRAPH_SIZE-1; rel++)
+            delete rel_temp[{rel, 0}];
+        
         SocialMatrix::Link newlinkwanted (nullptr, nullptr, 0);
         return std::make_tuple(nullptr, nullptr, newlinkwanted, false);
     }
@@ -289,9 +249,8 @@ std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individua
     Individual::PSAndAlphaTuple PS_Alpha = this->buildPSAndAlpha(rel_temp);
     
     //We delete temp pointers
-    for (std::size_t rel(0); rel < GRAPH_SIZE-1; rel++){
+    for (std::size_t rel(0); rel < GRAPH_SIZE-1; rel++)
         delete rel_temp[{rel, 0}];
-    }
     
     #if GRAPH_SIZE < 100
     std::cout << "Computing grad" << std::endl;
@@ -368,10 +327,8 @@ std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individua
         }
         
         // target not found
-        if (target_i == -1){
-            SocialMatrix::Link newlinkwanted (nullptr, nullptr, 0);
-            return std::make_tuple(nullptr, nullptr, newlinkwanted, false);
-        }
+        if (target_i == -1)
+            return std::make_tuple(nullptr, nullptr, SocialMatrix::Link (nullptr, nullptr, 0), false);
         
         // too little desire
         if (std::abs(grad(target_i+1, 1)) < MIN_LINK_WEIGHT)

@@ -19,7 +19,7 @@ namespace akml {
 class NeuralNetwork {
 public:
     typedef std::vector<std::pair<std::size_t, const akml::ActivationFunction<float>*>> initialize_list_type;
-    const typedef enum { GRADIENT_DESCENT=-1, GRADIENT_ASCENT=1} GRADIENT_METHODS;
+    const typedef enum : short int { GRADIENT_DESCENT=-1, GRADIENT_ASCENT=1} GRADIENT_METHODS;
     
 protected:
     const std::string customOriginField;
