@@ -47,20 +47,28 @@ SocialMatrix::~SocialMatrix(){
             for (std::size_t i(0); i < Individual::P_DIMENSION; i++){
                 p.push_back( char( individuals[{indiv,0}]->getP()(i+1, 1) + 48) );
             }
-            dijkstra_distance_mat = akml::dijkstra_distance_algorithm(binaryadjacencymatrix, indiv);
-            verticesTrackersManager.addSave(SocialMatrix::currentRound, individuals[{indiv,0}]->agentid, individuals[{indiv,0}]->gamma, individuals[{indiv,0}]->is_greedy, akml::mean(dijkstra_distance_mat, false, ULONG_MAX), akml::stat_var(dijkstra_distance_mat, ULONG_MAX), akml::max(dijkstra_distance_mat), p);
+            if (SocialMatrix::currentRound == 1){
+                verticesTrackersManager.addSave(SocialMatrix::currentRound, individuals[{indiv,0}]->agentid, individuals[{indiv,0}]->gamma, individuals[{indiv,0}]->is_greedy, -1,-1, -1, p);
+            }else {
+                dijkstra_distance_mat = akml::dijkstra_distance_algorithm(binaryadjacencymatrix, indiv);
+                verticesTrackersManager.addSave(SocialMatrix::currentRound, individuals[{indiv,0}]->agentid, individuals[{indiv,0}]->gamma, individuals[{indiv,0}]->is_greedy, akml::mean(dijkstra_distance_mat, false, ULONG_MAX), akml::stat_var(dijkstra_distance_mat, ULONG_MAX), akml::max(dijkstra_distance_mat), p);
+            }
+            
         }
-        
-        if (SocialMatrix::COMPUTE_CLUSTERING)
-            SocialMatrix::clusteringTrackersManager.addSave(SocialMatrix::computeClusteringCoefficients(&binaryadjacencymatrix));
-        SocialMatrix::finalAdjacencyMatrixTrackersManager.addSave(SocialMatrix::asAdjacencyMatrix());
-        
-        SocialMatrix::edgeTrackersManager.saveToCSV(logPath + "SMS-Save-Edges-" + logID + ".csv", false);
-        SocialMatrix::utilityTrackersManager.saveToCSV(logPath + "SMS-Save-Utility-" + logID + ".csv", false);
         SocialMatrix::verticesTrackersManager.saveToCSV(logPath + "SMS-Save-Vertices-"  + logID + ".csv", false);
-        if (SocialMatrix::COMPUTE_CLUSTERING)
-            SocialMatrix::clusteringTrackersManager.saveToCSV(logPath + "SMS-Save-Clustering-" + logID + ".csv", false);
+        if (SocialMatrix::currentRound != 1){
+            if (SocialMatrix::COMPUTE_CLUSTERING)
+                SocialMatrix::clusteringTrackersManager.addSave(SocialMatrix::computeClusteringCoefficients(&binaryadjacencymatrix));
+            
+            SocialMatrix::edgeTrackersManager.saveToCSV(logPath + "SMS-Save-Edges-" + logID + ".csv", false);
+            SocialMatrix::utilityTrackersManager.saveToCSV(logPath + "SMS-Save-Utility-" + logID + ".csv", false);
+            
+            if (SocialMatrix::COMPUTE_CLUSTERING)
+                SocialMatrix::clusteringTrackersManager.saveToCSV(logPath + "SMS-Save-Clustering-" + logID + ".csv", false);
+        }
+        SocialMatrix::finalAdjacencyMatrixTrackersManager.addSave(SocialMatrix::asAdjacencyMatrix());
         SocialMatrix::finalAdjacencyMatrixTrackersManager.saveToCSV(logPath + "SMS-Save-AdjacencyMatrix-" + logID + ".csv", false);
+        
         
     }
     for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++)

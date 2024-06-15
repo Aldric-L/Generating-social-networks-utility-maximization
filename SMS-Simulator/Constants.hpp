@@ -7,7 +7,7 @@
 
 #include "CMakeConsts.h"
 
-#define SMS_VERSION "0.4 13/06/24"
+#define SMS_VERSION "0.4 15/06/24"
 
 #include <stdio.h>
 #include <iostream>

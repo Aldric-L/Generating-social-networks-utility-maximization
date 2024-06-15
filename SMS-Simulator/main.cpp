@@ -44,6 +44,7 @@ int main(int argc, const char * argv[]) {
          akml::CLOption<float> (&Individual::DEFAULT_DELTA, "D", "delta", "Utility parameter", 2),
          akml::CLOption<float> (&Individual::DEFAULT_KAPPA, "K", "kappa", "Utility parameter"),
          akml::CLOption<float> (&Individual::GAMMA_MEAN, "G", "gamma", "Utility parameter", 9),
+         akml::CLOption<float> (&Individual::GAMMA_DISP, "g", "gammaDisp", "Dispersion of the utility parameter gamma"),
          akml::CLOption<bool> (&Individual::HETEROGENEOUS_P, "p", "htroP", "Enable/Disable the two groups of P", false),
          akml::CLOption<bool> (&SocialMatrix::COMPUTE_CLEARING, "c", "clearing", "Enable/Disable the clearing and decaying mechanism", true),
          akml::CLOption<bool> (&SocialMatrix::COMPUTE_CLUSTERING, "C", "clustering", "Enable/Disable the computing of clustering coefficients", false),

@@ -37,10 +37,15 @@ Individual::Individual(SocialMatrix& world, unsigned long int agentid) : kappa(D
     else
         Individual::is_greedy = false;
     
-    float g = 0;
-    std::normal_distribution<float> norm(1,0.35);
-    while((g = norm(this->world->getRandomGen())) > 1.8 || g < 0.1 || g==1){ g = norm(this->world->getRandomGen()); }
-    Individual::gamma = g+Individual::GAMMA_MEAN;
+    
+    if (GAMMA_DISP > 0){
+        float g = 0;
+        std::normal_distribution<float> norm(1,GAMMA_DISP);
+        while((g = norm(this->world->getRandomGen())) > 1.8 || g < 0.1 || g==1){ g = norm(this->world->getRandomGen()); }
+        Individual::gamma = g+Individual::GAMMA_MEAN-1;
+    }else {
+        Individual::gamma = Individual::GAMMA_MEAN;
+    }
     
     utilityFunc = new ALKYUtility(Individual::gamma, Individual::DEFAULT_KAPPA, Individual::DEFAULT_DELTA);
 }
