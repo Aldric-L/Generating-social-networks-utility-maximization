@@ -7,7 +7,7 @@
 
 #include "CMakeConsts.h"
 
-#define SMS_VERSION "0.4 15/06/24"
+#define SMS_VERSION "0.5 29/06/24"
 
 #include <stdio.h>
 #include <iostream>
@@ -26,17 +26,15 @@
 #include <deque>
 
 #ifndef GRAPH_SIZE
-    #define GRAPH_SIZE 20
+    #define GRAPH_SIZE (20)
 #endif
 
 #ifndef MAX_THREADS_USAGE
-    #define MAX_THREADS_USAGE 85
+    #define MAX_THREADS_USAGE (85)
 #endif
 
 #define MODE_ECO_LOG 0
 #define MODE_FOLDER_LOG 1
-
-#define LINKS_NB ((GRAPH_SIZE*GRAPH_SIZE-GRAPH_SIZE)/2)
 
 #define DEPRECIATION_RATE (0.001)
 #define MIN_LINK_WEIGHT (0.005)

@@ -55,7 +55,7 @@ public:
         if (this->m_data != nullptr || this->m_data_end != nullptr)
             this->deleteInternStorage();
         
-        this->m_data = new element_type[(this->rows)*(this->columns)]();
+        this->m_data = new element_type[(this->rows)*(this->columns)]{};
         this->m_data_end = this->m_data+(this->rows)*(this->columns);
     }
     

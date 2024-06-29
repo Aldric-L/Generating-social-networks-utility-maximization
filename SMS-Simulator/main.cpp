@@ -31,6 +31,9 @@ int main(int argc, const char * argv[]) {
     std::size_t rounds = 1000;
     unsigned short int simulationsNb = 1;
     bool shouldITryToFindOptimalGraph = false;
+    std::string compatibilityMatExtPath = "";
+    std::string adjacencyMatExtPath = "";
+    bool shouldICheckLTCondition = false;
     
     auto CLOptionsTuple = std::make_tuple
         (akml::CLOption<std::size_t> (&rounds, "R", "rounds", "How many rounds?"),
@@ -48,9 +51,12 @@ int main(int argc, const char * argv[]) {
          akml::CLOption<bool> (&Individual::HETEROGENEOUS_P, "p", "htroP", "Enable/Disable the two groups of P", false),
          akml::CLOption<bool> (&SocialMatrix::COMPUTE_CLEARING, "c", "clearing", "Enable/Disable the clearing and decaying mechanism", true),
          akml::CLOption<bool> (&SocialMatrix::COMPUTE_CLUSTERING, "C", "clustering", "Enable/Disable the computing of clustering coefficients", false),
+         akml::CLOption<bool> (&shouldICheckLTCondition, "t", "checkLTCond", "Should we check the Love Triangle Condition", Individual::P_DIMENSION < 20),
          akml::CLOption<unsigned short int> (&SocialMatrix::UTILITY_COMPUTATION_INTERVAL, "u", "utFreq", "Frequency of the utility log"),
          akml::CLOption<bool> (&SocialMatrix::SHOULD_I_LOG, "l", "log", "Should we log results?", true),
-         akml::CLOption<std::string> (&SocialMatrix::GLOBAL_LOG_PREFIX, "L", "logPrefix", "Select a subfolder for registering logs"));
+         akml::CLOption<std::string> (&SocialMatrix::GLOBAL_LOG_PREFIX, "L", "logPrefix", "Select a subfolder for registering logs"),
+         akml::CLOption<std::string> (&adjacencyMatExtPath, "a", "adjacencyFName", "Import adjacency matrix from csv file"),
+         akml::CLOption<std::string> (&compatibilityMatExtPath, "c", "compatibilityFName", "Import compatibility matrix from csv file"));
     
     try {
         akml::CLManager localCLManager(argc, argv, CLOptionsTuple);
@@ -61,16 +67,37 @@ int main(int argc, const char * argv[]) {
     if (SocialMatrix::SHOULD_I_LOG)
         std::cout << "Log mode active. Files will be saved in " << std::filesystem::current_path() << "\n\n";
     
-    auto processGame = [&CLOptionsTuple, &shouldITryToFindOptimalGraph](std::size_t rds, std::size_t id, std::size_t batchSize) {
-        SocialMatrix sm;
-        std::string logPath = sm.whereWillYouLog().first;
-        std::string logId = sm.whereWillYouLog().second;
+    auto processGame = [&CLOptionsTuple, &shouldITryToFindOptimalGraph, &adjacencyMatExtPath, &compatibilityMatExtPath, &shouldICheckLTCondition](std::size_t rds, std::size_t id, std::size_t batchSize) {
         auto start = std::chrono::high_resolution_clock::now();
-            sm.initializeLinks();
+            SocialMatrix sm;
+            std::string logPath = sm.whereWillYouLog().first;
+            std::string logId = sm.whereWillYouLog().second;
+            OptimalMatrix optiMatComputer;
+            if (compatibilityMatExtPath != ""){
+                auto parsedMat = akml::parseCSVToMatrix<float>(compatibilityMatExtPath, GRAPH_SIZE, GRAPH_SIZE);
+                sm.forceEditCompatibilityMatrix(parsedMat);
+                if (shouldITryToFindOptimalGraph)
+                    optiMatComputer.setCompatibilityMatrix(std::move(parsedMat));
+            }
+            if (adjacencyMatExtPath != ""){
+                auto parsedMat = akml::parseCSVToMatrix<float>(adjacencyMatExtPath, GRAPH_SIZE, GRAPH_SIZE);
+                sm.initializeLinks(std::move(parsedMat));
+            }else {
+                sm.initializeLinks();
+            }
+            if (shouldICheckLTCondition){
+                if (!sm.checkLoveTriangleCondition()){
+                    std::cout << "Simulation " << id << " / " << batchSize << ": Error. The Love Triangle condition is not verified. \n";
+                    goto endSimulation;
+                }
+            }
+        {
             if (shouldITryToFindOptimalGraph){
                 std::cout << "Simulation " << id << " / " << batchSize << ": Computing the analytical optimal graph...\n";
-                OptimalMatrix optiMatComputer;
-                auto optiMat = optiMatComputer.compute(sm.asAdjacencyMatrix(), sm.getIndividuals());
+                
+                auto optiMatContainer = optiMatComputer.compute(sm.asAdjacencyMatrix(), sm.getIndividuals());
+                std::size_t optiMatEpochs = optiMatContainer.first;
+                auto optiMat = optiMatContainer.second;
                 akml::CSV_Saver<akml::FullMatrixSave<akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE>>> optimalAdjacencyMatrixTrackersManager;
                 optimalAdjacencyMatrixTrackersManager.addSave(optiMat);
                 optimalAdjacencyMatrixTrackersManager.addSave(optiMatComputer.exportAffinityBuffer());
@@ -78,21 +105,23 @@ int main(int argc, const char * argv[]) {
                 akml::CSV_Saver<akml::FullMatrixSave<akml::DynamicMatrix<float>>> utilityTrackersManager;
                 utilityTrackersManager.addSave(optiMatComputer.computeObjectiveFunction(optiMat, sm.getIndividuals()));
                 utilityTrackersManager.saveToCSV(logPath + "SMS-Save-OptimalUtility-" + logId + ".csv", false);
+                std::cout << "Simulation " << id << " / " << batchSize << ": Optimal graph computed (" << optiMatEpochs << " / 1000000).\n";
             }
-        
             std::cout << "Simulation " << id << " / " << batchSize << ": Processing simulation...\n";
             unsigned short int inactive_consecutive_rounds_counter(0);
             for (std::size_t i(0); i < rds; i++){
-                    if (inactive_consecutive_rounds_counter == 3 + Individual::MEMORY_SIZE){
-                        std::cout << "Simulation " << id << " / " << batchSize << ": Inactivity detected - Stopping generation at round " << i << "\n";
-                        break;
-                    }
-                    
-                    if (sm.processARound(static_cast<std::size_t>(rds)) == GRAPH_SIZE)
-                        inactive_consecutive_rounds_counter++;
-                    else
-                        inactive_consecutive_rounds_counter=0;
+                if (inactive_consecutive_rounds_counter == 3 + Individual::MEMORY_SIZE){
+                    std::cout << "Simulation " << id << " / " << batchSize << ": Inactivity detected - Stopping generation at round " << i << "\n";
+                    break;
+                }
+                
+                if (sm.processARound(static_cast<std::size_t>(rds)) == GRAPH_SIZE)
+                    inactive_consecutive_rounds_counter++;
+                else
+                    inactive_consecutive_rounds_counter=0;
             }
+        }
+        endSimulation:
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> duration = end - start;
         

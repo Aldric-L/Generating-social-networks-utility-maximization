@@ -5,6 +5,13 @@
 //  Created by Aldric Labarthe on 20/11/2023.
 //
 #include <climits>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <string>
+#include <stdexcept>
+
 #include "MatrixInterface.hpp"
 #include "StaticMatrix.hpp"
 #include "DynamicMatrix.hpp"
@@ -515,6 +522,46 @@ namespace akml {
         }
         return A;
     };
+
+    template <akml::Matrixable MATRIX_INNER_TYPE>
+    inline akml::DynamicMatrix<MATRIX_INNER_TYPE> parseCSVToMatrix(const std::string path, const std::size_t nrows, const std::size_t ncols, const std::size_t from=0, const long long int to=-1){
+        std::ifstream file(path);
+        std::vector<MATRIX_INNER_TYPE> matrix;
+        std::string line;
+        int rowCount = 0;
+
+        if (!file.is_open())
+            throw std::runtime_error("Could not open the file! (path=" + path + ")");
+
+        while (std::getline(file, line)) {
+            if (rowCount >= from && (to == -1 || rowCount < to)){
+                std::stringstream ss(line);
+                std::string value;
+
+                while (std::getline(ss, value, ',')) {
+                    try {
+                        MATRIX_INNER_TYPE tmp;
+                        std::istringstream iss(value);
+                        iss >> tmp;
+                        matrix.push_back(tmp);
+                    } catch (const std::invalid_argument& e) {
+                        file.close();
+                        throw std::invalid_argument("Invalid cast: " + value);
+                    }
+                }
+            }
+            rowCount++;
+        }
+
+        file.close();
+        if (nrows*ncols != matrix.size())
+            throw std::invalid_argument("Unable to retrieve a same size matrix. (Matrix should be " + std::to_string(nrows*ncols) + " v. " + std::to_string(matrix.size()) + ")");
+            
+        akml::DynamicMatrix<MATRIX_INNER_TYPE> akmlMat(nrows, ncols);
+        std::copy(&matrix.front(), &matrix.back()+1, akmlMat.getStorage());
+        
+        return akmlMat;
+    }
 
 }
 #endif /* MatrixOperations_h */

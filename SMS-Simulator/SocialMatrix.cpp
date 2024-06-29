@@ -7,7 +7,7 @@
 #include "SocialMatrix.hpp"
 #include "Individual.hpp"
 
-SocialMatrix::SocialMatrix() : links(LINKS_NB), gen(std::random_device{}()){
+SocialMatrix::SocialMatrix() : gen(std::random_device{}()){
     edgeTrackersManager.setParameterNames({{ "round", "vertex1", "vertex2", "old_weight", "new_weight", "accepted", "forced" }});
     utilityTrackersManager.setParameterNames({{ "round", "agentid", "utility" }});
     verticesTrackersManager.setParameterNames({{ "round", "agentid", "gamma", "isgreedy", "meandist", "vardist", "maxdist", "P" }});
@@ -16,9 +16,10 @@ SocialMatrix::SocialMatrix() : links(LINKS_NB), gen(std::random_device{}()){
         individuals[{indiv,0}] = new Individual(*this, indiv);
     
     std::size_t link_i(0);
+    links.reserve((GRAPH_SIZE*GRAPH_SIZE-GRAPH_SIZE)/2);
     for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
         for (std::size_t indiv_t(0); indiv_t<indiv; indiv_t++){
-            SocialMatrix::links[link_i] = Link (
+            SocialMatrix::links.emplace_back(
                                                 individuals[{indiv,0}],
                                                 individuals[{indiv_t,0}],
                                                 0.f,
@@ -36,6 +37,32 @@ SocialMatrix::SocialMatrix() : links(LINKS_NB), gen(std::random_device{}()){
     #endif
     std::filesystem::create_directories(logPath);
 }
+
+SocialMatrix::SocialMatrix(const akml::DynamicMatrix<float>& compatibilityMatrix) : SocialMatrix::SocialMatrix() {
+    if (compatibilityMatrix.getNRows() != compatibilityMatrix.getNColumns() || compatibilityMatrix.getNColumns() != GRAPH_SIZE)
+        throw std::invalid_argument("Compatibility matrix is not properly sized for the graph");
+    
+    std::size_t link_i(0);
+    for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
+        for (std::size_t indiv_t(0); indiv_t<indiv; indiv_t++){
+            SocialMatrix::links[link_i].compatibility = compatibilityMatrix[{indiv, indiv_t}];
+            link_i++;
+        }
+    }
+};
+
+void SocialMatrix::forceEditCompatibilityMatrix(const akml::DynamicMatrix<float>& compatibilityMatrix) {
+    if (compatibilityMatrix.getNRows() != compatibilityMatrix.getNColumns() || compatibilityMatrix.getNColumns() != GRAPH_SIZE)
+        throw std::invalid_argument("Compatibility matrix is not properly sized for the graph");
+    
+    std::size_t link_i(0);
+    for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
+        for (std::size_t indiv_t(0); indiv_t<indiv; indiv_t++){
+            SocialMatrix::links[link_i].compatibility = compatibilityMatrix[{indiv, indiv_t}];
+            link_i++;
+        }
+    }
+};
 
 SocialMatrix::~SocialMatrix(){
     if (SocialMatrix::SHOULD_I_LOG){
@@ -115,15 +142,47 @@ void SocialMatrix::initializeLinks(){
         SocialMatrix::finalAdjacencyMatrixTrackersManager.addSave(SocialMatrix::asAdjacencyMatrix());
     }
     SocialMatrix::currentRound = 1;
-    /*#if GRAPH_SIZE >= 100
-        std::cout << "Thread " << std::this_thread::get_id() << " - Status: Initialized\n";
-    #endif*/
+}
+
+void SocialMatrix::initializeLinks(const akml::DynamicMatrix<float>& adjacencyMatrix) {
+    if (adjacencyMatrix.getNRows() != adjacencyMatrix.getNColumns() || adjacencyMatrix.getNColumns() != GRAPH_SIZE)
+        throw std::invalid_argument("Adjacency matrix is not properly sized for the graph");
+    
+    std::size_t link_i(0);
+    
+    for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
+        for (std::size_t indiv_t(0); indiv_t<indiv; indiv_t++){
+            SocialMatrix::links[link_i].weight = adjacencyMatrix[{indiv, indiv_t}];
+        
+            // Any link that is to be initialized should be saved
+            edgeTrackersManager.addSave(SocialMatrix::currentRound, SocialMatrix::links[link_i].first->agentid, SocialMatrix::links[link_i].second->agentid, 0, SocialMatrix::links[link_i].weight, true, true);
+            link_i++;
+        }
+    }
+    if (SocialMatrix::SHOULD_I_LOG){
+        akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> binaryadjacencymatrix(SocialMatrix::asBinaryAdjacencyMatrix());
+        akml::Matrix<std::size_t, GRAPH_SIZE, 1> dijkstra_distance_mat;
+        for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
+            std::string p = "";
+            for (int i(0); i < Individual::P_DIMENSION; i++){
+                p.push_back( char( individuals[{indiv,0}]->getP()(i+1, 1) + 48) );
+            }
+            dijkstra_distance_mat = akml::dijkstra_distance_algorithm(binaryadjacencymatrix, indiv);
+            verticesTrackersManager.addSave(SocialMatrix::currentRound, individuals[{indiv,0}]->agentid, individuals[{indiv,0}]->gamma, individuals[{indiv,0}]->is_greedy, akml::mean(dijkstra_distance_mat, false, ULONG_MAX), akml::stat_var(dijkstra_distance_mat, ULONG_MAX), akml::max(dijkstra_distance_mat), p);
+            
+        }
+        if (SocialMatrix::COMPUTE_CLUSTERING)
+            clusteringTrackersManager.addSave(SocialMatrix::computeClusteringCoefficients(&binaryadjacencymatrix));
+        
+        SocialMatrix::finalAdjacencyMatrixTrackersManager.addSave(SocialMatrix::asAdjacencyMatrix());
+    }
+    SocialMatrix::currentRound = 1;
 }
 
 akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1> SocialMatrix::getIndividualRelations(Individual* indiv) {
     akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1> linksForIndividual;
     unsigned short int incr = 0;
-    for (std::size_t i(0); i < LINKS_NB; i++){
+    for (std::size_t i(0); i < links.size(); i++){
         if ((SocialMatrix::links[i].first == indiv || SocialMatrix::links[i].second == indiv)){
             linksForIndividual[{incr,0}] = &links[i];
             incr++;
@@ -177,7 +236,8 @@ std::vector<SocialMatrix::Link> SocialMatrix::getIndividualScope(Individual* ind
                         l.first = indiv;
                         l.second = target1;
                         l.weight = linksofTarget[{level1, 0}]->weight * linksofIndividual[{level0, 0}]->weight;
-                        l.compatibility = akml::inner_product(indiv->getP(), target1->getP()) / Individual::P_DIMENSION;
+                        //l.compatibility = akml::inner_product(indiv->getP(), target1->getP()) / Individual::P_DIMENSION;
+                        l.compatibility = getCompatibilityBtwnIndividuals(indiv, target1);
                         bool redundant = false;
                         for (int icheck(0); icheck < scope.size(); icheck++){
                             if ((scope[icheck].first == l.first && scope[icheck].second == l.second)
@@ -200,7 +260,7 @@ void SocialMatrix::editLink(const Individual* indiv1, const Individual* indiv2, 
     if (indiv1 == indiv2 || indiv1 == nullptr || indiv2 == nullptr)
         throw std::invalid_argument("Attempting to edit a non-consistent link");
     
-    for (std::size_t link_i(0); link_i<LINKS_NB; link_i++){
+    for (std::size_t link_i(0); link_i<links.size(); link_i++){
         if ((SocialMatrix::links[link_i].first == indiv1 && SocialMatrix::links[link_i].second == indiv2)
             || (SocialMatrix::links[link_i].second == indiv1 && SocialMatrix::links[link_i].first == indiv2)){
             SocialMatrix::editLink(&SocialMatrix::links[link_i], newWeight, accepted, forced);
@@ -232,9 +292,6 @@ void SocialMatrix::editLink(SocialMatrix::Link* link, const float newWeight, boo
 
 
 unsigned int SocialMatrix::processARound(std::size_t totalrounds) {
-    #if GRAPH_SIZE < 100
-        std::cout << "\n\n ---- ROUND " << SocialMatrix::currentRound;
-    #endif
     if (SocialMatrix::COMPUTE_CLEARING){
         // Test implementation of a usure of weights and a clearing of small weights
         if (SocialMatrix::currentRound != 0 && SocialMatrix::currentRound != 1 && SocialMatrix::currentRound != totalrounds && SocialMatrix::currentRound % 10 == 0){
@@ -254,24 +311,16 @@ unsigned int SocialMatrix::processARound(std::size_t totalrounds) {
     
     for (std::size_t i(start_indiv); i < GRAPH_SIZE; i++){
         Individual* nodei = SocialMatrix::getIndividual(i);
-        #if GRAPH_SIZE < 100
-            std::cout << "\n --Individual (" << i+1 << " / " << GRAPH_SIZE <<  ") " << nodei << std::endl;
-        #endif
         inactions += nodei->takeAction() ? 0 : 1;
     }
     for (std::size_t i(0); i < start_indiv; i++){
         Individual* nodei = SocialMatrix::getIndividual(i);
-        #if GRAPH_SIZE < 100
-            std::cout << "\n --Individual (" << i+1 << " / " << GRAPH_SIZE <<  ") " << nodei << std::endl;
-        #endif
         inactions += nodei->takeAction() ? 0 : 1;
     }
-    #if GRAPH_SIZE >= 100
         if (
             (MODE_ECO_LOG && ((totalrounds != 0 && totalrounds > 100 && SocialMatrix::currentRound % totalrounds/10 == 0) || SocialMatrix::currentRound == 1))
             || (!MODE_ECO_LOG && ((totalrounds < 50 && (totalrounds%5==0 || totalrounds < 5)) || (totalrounds > 50 && SocialMatrix::currentRound % UTILITY_COMPUTATION_INTERVAL == 0) ) )
             ) {
-            //std::cout << "\n Computing utility: round " << SocialMatrix::currentRound << " / " << totalrounds << " thread " << std::this_thread::get_id();
             for (std::size_t i(0); i < GRAPH_SIZE; i++){
                 SocialMatrix::utilityTrackersManager.addSave(SocialMatrix::currentRound, SocialMatrix::getIndividual(i)->agentid, SocialMatrix::getIndividual(i)->computeUtility(nullptr));
             }
@@ -283,28 +332,15 @@ unsigned int SocialMatrix::processARound(std::size_t totalrounds) {
                     SocialMatrix::clusteringTrackersManager.addSave(SocialMatrix::computeClusteringCoefficients(&binaryadjacencymatrix));
                 }
             }
-        }/*else if (totalrounds != 0 && totalrounds > 100 && (SocialMatrix::currentRound+1) % (totalrounds/100) == 0 && ((SocialMatrix::currentRound+1)*100/totalrounds)%10==0 ){
-            std::cout << "Thread " << std::this_thread::get_id() << " - Status: " << SocialMatrix::currentRound*100/totalrounds << "% completed\n";
-        }*/
-    #else
-        for (std::size_t i(0); i < GRAPH_SIZE; i++){
-            SocialMatrix::utilityTrackersManager.addSave(SocialMatrix::currentRound, SocialMatrix::getIndividual(i)->agentid, SocialMatrix::getIndividual(i)->computeUtility(nullptr));
         }
-    #endif
     
-    #if GRAPH_SIZE >= 100
-    /*if (SocialMatrix::currentRound % 100 == 0){
-        SocialMatrix::edgeTrackersManager.bufferize(false);
-        SocialMatrix::utilityTrackersManager.bufferize(false);
-    }*/
-    #endif
     SocialMatrix::currentRound++;
     return inactions;
 }
 
 akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> SocialMatrix::asAdjacencyMatrix() const{
     akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> output;
-    for (std::size_t l(0); l<LINKS_NB; l++){
+    for (std::size_t l(0); l<links.size(); l++){
         output(SocialMatrix::links[l].first->agentid+1, SocialMatrix::links[l].second->agentid+1) = SocialMatrix::links[l].weight;
         output(SocialMatrix::links[l].second->agentid+1, SocialMatrix::links[l].first->agentid+1) = SocialMatrix::links[l].weight;
     }
@@ -318,7 +354,7 @@ akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> SocialMatrix::asBinaryAdjacencyMatrix
             *(localmatrix.getStorage() + i) = (*(adjacencymatrix->getStorage() + i) > 0.005) ? 1 : 0;
         }
     }else {
-        for (std::size_t l(0); l<LINKS_NB; l++){
+        for (std::size_t l(0); l<links.size(); l++){
             localmatrix(SocialMatrix::links[l].first->agentid+1, SocialMatrix::links[l].second->agentid+1) = (SocialMatrix::links[l].weight > 0.005) ? 1 : 0;
             localmatrix(SocialMatrix::links[l].second->agentid+1, SocialMatrix::links[l].first->agentid+1) = (SocialMatrix::links[l].weight > 0.005) ? 1 : 0;
         }
@@ -353,7 +389,7 @@ akml::Matrix<float, GRAPH_SIZE+1, 1> SocialMatrix::computeClusteringCoefficients
         bam_td = true;
     }
     akml::Matrix<float, GRAPH_SIZE+1, 1> result;
-    std::size_t pairs(0), possiblepairs(0), global_closed_triples, global_dim_scopes;
+    std::size_t pairs(0), possiblepairs(0), global_closed_triples(0), global_dim_scopes(0);
     for (std::size_t node_id(0); node_id < GRAPH_SIZE; node_id++){
         std::size_t dimscope(0);
         for (std::size_t node_target_id(0); node_target_id < GRAPH_SIZE; node_target_id++){
@@ -398,4 +434,40 @@ akml::Matrix<float, GRAPH_SIZE+1, 1> SocialMatrix::computeClusteringCoefficients
 
 std::pair<std::string, std::string> SocialMatrix::whereWillYouLog() const {
     return std::make_pair(logPath, logID);
+}
+
+float SocialMatrix::getCompatibilityBtwnIndividuals(const Individual* indiv1, const Individual* indiv2) const {
+    const std::size_t id1 = indiv1->agentid;
+    const std::size_t id2 = indiv2->agentid;
+    
+    const std::size_t j = std::min(id1, id2);
+    const std::size_t i = std::max(id1, id2);
+    
+    std::size_t cols = 0;
+    for (std::size_t k(1); k < i; k++)
+        cols += k;
+
+    
+    std::size_t pos = cols+j;
+    assert((links[pos].first == indiv1 && links[pos].second == indiv2) || (links[pos].first == indiv2 && links[pos].second == indiv1));
+    return links[pos].compatibility;
+}
+
+
+bool SocialMatrix::checkLoveTriangleCondition() const {
+    for (std::size_t i(0); i < GRAPH_SIZE; i++){
+        std::size_t checks = 0;
+        for (std::size_t m(0); m < GRAPH_SIZE; m++){
+            for (std::size_t k(0); k < GRAPH_SIZE; k++){
+                if(m!=k && k!= i && m != i && getCompatibilityBtwnIndividuals(individuals[{m, 0}], individuals[{k, 0}]) < getCompatibilityBtwnIndividuals(individuals[{i, 0}], individuals[{k, 0}]) + getCompatibilityBtwnIndividuals(individuals[{m, 0}], individuals[{i, 0}])){
+                    ++checks;
+                    goto endloop;
+                }
+            }
+        }
+        endloop:
+        if (checks < 1)
+            return false;
+    }
+    return true;
 }

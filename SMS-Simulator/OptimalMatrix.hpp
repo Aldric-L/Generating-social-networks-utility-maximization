@@ -26,7 +26,9 @@ class OptimalMatrix {
 public:
     static inline unsigned short int MAX_PRECISION = 5;
     
-    akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> compute(akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> adjacencyMatrix, const akml::Matrix<Individual*, GRAPH_SIZE, 1>& individuals, const std::size_t max_epochs = 1000000, const double lr_moment1 = 0.9,const double lr_moment2 = 0.999, const double step_size = 0.001, const double epsilon=1e-8);
+    void setCompatibilityMatrix(const akml::DynamicMatrix<float>& compatibilityMatrix);
+    
+    std::pair<std::size_t, akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE>> compute(akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> adjacencyMatrix, const akml::Matrix<Individual*, GRAPH_SIZE, 1>& individuals, const std::size_t max_epochs = 1000000, const double lr_moment1 = 0.9,const double lr_moment2 = 0.999, const double step_size = 0.001, const double epsilon=1e-8);
     
     akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> exportAffinityBuffer() const;
     

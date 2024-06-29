@@ -55,9 +55,13 @@ class SocialMatrix {
     
         std::size_t currentRound = 0;
         SocialMatrix();
-        ~SocialMatrix();    
+        SocialMatrix(const akml::DynamicMatrix<float>& compatibilityMatrix);
+        ~SocialMatrix();
     
         void initializeLinks();
+        void initializeLinks(const akml::DynamicMatrix<float>& adjacencyMatrix);
+        void forceEditCompatibilityMatrix(const akml::DynamicMatrix<float>& compatibilityMatrix);
+        bool checkLoveTriangleCondition() const;
         akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1> getIndividualRelations(Individual* indiv);
         akml::Matrix<Individual*, GRAPH_SIZE, 1> getIndividuals();
         Individual* getIndividual(const std::size_t indiv_id);
@@ -71,6 +75,7 @@ class SocialMatrix {
         akml::Matrix<float, GRAPH_SIZE+1, 1> computeClusteringCoefficients(akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE>* binaryadjacencymatrix = nullptr) const;
         std::pair<std::string, std::string> whereWillYouLog() const;
         inline std::mt19937& getRandomGen() { return gen; }
+        float getCompatibilityBtwnIndividuals(const Individual* indiv1, const Individual* indiv2) const;
 };
 
  /* SocialMatrix_hpp */

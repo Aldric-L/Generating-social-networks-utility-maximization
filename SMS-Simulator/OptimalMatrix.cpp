@@ -7,23 +7,32 @@
 
 #include "OptimalMatrix.hpp"
 
-akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> OptimalMatrix::compute(akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> adjacencyMatrix, const akml::Matrix<Individual*, GRAPH_SIZE, 1>& individuals, const std::size_t max_epochs, const double lr_moment1,const double lr_moment2, const double step_size, const double epsilon) {
+void OptimalMatrix::setCompatibilityMatrix(const akml::DynamicMatrix<float>& compatibilityMatrix){
+    for (std::size_t indiv(0); indiv < compatibilityMatrix.getNRows(); indiv++)
+        PSProdBuffer.push_back(akml::getRowAsColumn(compatibilityMatrix, indiv));
+}
+
+std::pair<std::size_t, akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE>> OptimalMatrix::compute(akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> adjacencyMatrix, const akml::Matrix<Individual*, GRAPH_SIZE, 1>& individuals, const std::size_t max_epochs, const double lr_moment1,const double lr_moment2, const double step_size, const double epsilon) {
     
     double tolerance = std::pow(10, -OptimalMatrix::MAX_PRECISION);
     
     // We first have to build the P_S Matrix
-    std::vector<akml::DynamicMatrix<float>> P_S_temp;
-    P_S_temp.reserve(individuals.getNRows());
-    for (std::size_t i(0); i < GRAPH_SIZE; i++)
-        P_S_temp.emplace_back(individuals[{i,0}]->getP());
-    akml::DynamicMatrix<float> P_S (P_S_temp);
-    
-    // We bufferize all compatibility scores that are constants at each iteration
-    for (std::size_t indiv(0); indiv < individuals.getNRows(); indiv++){
-        akml::DynamicMatrix<float> P_prod (akml::matrix_product(akml::transpose(P_S), individuals[{indiv, 0}]->getP()));
-        P_prod = P_prod * (1/(float)P_S.getNRows());
-        P_prod[{indiv, 0}] = 0.f;
-        PSProdBuffer.push_back(std::move(P_prod));
+    if (PSProdBuffer.size() == 0){
+        std::vector<akml::DynamicMatrix<float>> P_S_temp;
+        P_S_temp.reserve(individuals.getNRows());
+        for (std::size_t i(0); i < GRAPH_SIZE; i++)
+            P_S_temp.emplace_back(individuals[{i,0}]->getP());
+        akml::DynamicMatrix<float> P_S (P_S_temp);
+        
+        // We bufferize all compatibility scores that are constants at each iteration
+        for (std::size_t indiv(0); indiv < individuals.getNRows(); indiv++){
+            akml::DynamicMatrix<float> P_prod (akml::matrix_product(akml::transpose(P_S), individuals[{indiv, 0}]->getP()));
+            P_prod = P_prod * (1/(float)P_S.getNRows());
+            P_prod[{indiv, 0}] = 0.f;
+            PSProdBuffer.push_back(std::move(P_prod));
+        }
+    }else if (PSProdBuffer.size() != individuals.getNRows()){
+        throw std::invalid_argument("PSProdBuffer is not equally sized with individuals");
     }
     
     //std::cout << "Before we start we are at: \n";
@@ -65,7 +74,7 @@ akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> OptimalMatrix::compute(akml::Matrix<
         adjacencyMatrix[{i,i}] = 0.f;
     
     //std::cout << "\nResult:\n" << computeObjectiveFunction(adjacencyMatrix, individuals);
-    return adjacencyMatrix;
+    return std::make_pair(epochs, adjacencyMatrix);
     
 }
 
