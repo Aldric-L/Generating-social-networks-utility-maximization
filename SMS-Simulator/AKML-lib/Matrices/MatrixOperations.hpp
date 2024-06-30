@@ -11,32 +11,41 @@
 #include <vector>
 #include <string>
 #include <stdexcept>
+#include <cassert>
 
 #include "MatrixInterface.hpp"
 #include "StaticMatrix.hpp"
 #include "DynamicMatrix.hpp"
 #include "Matrix.hpp"
 
+#define assertm(exp, msg) assert(((void)msg, exp))
+
 #ifndef AKML_MatrixOperations_hpp
 #define AKML_MatrixOperations_hpp
 
 namespace akml {
+    // CAUTION ! row is indexed from 1 !
     template <akml::Matrixable element_type>
     inline akml::DynamicMatrix<element_type> getRowAsColumn(const akml::DynamicMatrix<element_type>& matrix, std::size_t row){
+        assertm(row != 0, "Row is indexed from 1 in akml::getRowAsColumn");
         akml::DynamicMatrix<element_type> result (matrix.getNColumns(), 1);
         result.forceByteCopy(matrix.getStorage() + (row-1)*matrix.getNColumns());
         return result;
     }
 
+    // CAUTION ! row is indexed from 1 !
     template <akml::Matrixable element_type>
     inline akml::DynamicMatrix<element_type> getRow(const akml::DynamicMatrix<element_type>& matrix, std::size_t row){
+        assertm(row != 0, "Row is indexed from 1 in akml::getRow");
         akml::DynamicMatrix<element_type> result (1, matrix.getNColumns());
         result.forceByteCopy(matrix.getStorage()+ (row-1)*matrix.getNColumns());
         return result;
     }
 
+    // CAUTION ! col is indexed from 1 !
     template <akml::Matrixable element_type>
     inline akml::DynamicMatrix<element_type> getColumn(const akml::DynamicMatrix<element_type>& matrix, std::size_t col){
+        assertm(col != 0, "Col is indexed from 1 in akml::getColumn");
         akml::DynamicMatrix<element_type> result (matrix.getNRows(), 1);
         for (std::size_t i(0); i < matrix.getNRows(); i++){
             result[{i, col-1}] = matrix[{i, col-1}];

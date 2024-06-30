@@ -9,7 +9,7 @@
 
 void OptimalMatrix::setCompatibilityMatrix(const akml::DynamicMatrix<float>& compatibilityMatrix){
     for (std::size_t indiv(0); indiv < compatibilityMatrix.getNRows(); indiv++)
-        PSProdBuffer.push_back(akml::getRowAsColumn(compatibilityMatrix, indiv));
+        PSProdBuffer.push_back(akml::getRowAsColumn(compatibilityMatrix, indiv+1));
 }
 
 std::pair<std::size_t, akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE>> OptimalMatrix::compute(akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> adjacencyMatrix, const akml::Matrix<Individual*, GRAPH_SIZE, 1>& individuals, const std::size_t max_epochs, const double lr_moment1,const double lr_moment2, const double step_size, const double epsilon) {
@@ -132,6 +132,8 @@ akml::DynamicMatrix<float> OptimalMatrix::computeObjectiveFunction(const akml::D
 }
 
 akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> OptimalMatrix::exportAffinityBuffer() const{
+    if (PSProdBuffer.size() == 0)
+        throw std::runtime_error("Attempting to export an affinity buffer that has not been initialized.");
     akml::DynamicMatrix<float> tmp(PSProdBuffer);
     return akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE>(tmp);
 }
