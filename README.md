@@ -1,7 +1,7 @@
 #  Social Matrix Simulation
 ### SMS Associates Yann Kerzreho & Aldric Labarthe @ ENS Paris-Saclay - 2023-2024
 
-Our model is a bilateral network of agents where each of them play iteratively to optimize their own utility. In this purpose they optimize the weights of their relations within a given scope. Each node/agent has its own carateristics. The model is provided in two forms: a global optimization problem and a round by round simulation with unperfect information.
+Our model is a bilateral network of agents where each of them play iteratively to optimize their own utility. In this purpose they optimize the weights of their relations within a given scope. Each node/agent has its own carateristics. The model is provided in two forms: a global optimization problem and a round by round simulation with imperfect information.
 
 ## Usage
 
@@ -30,7 +30,14 @@ cmake -B build -DCMAKE_BUILD_TYPE=Debug
 cmake --build build --config Debug
 ```
 
-### CLI Usage
+### How to use the Simulator
+
+#### General principle
+The Simulator is designed to conduct **round by round** simulations. Optimal graphs (static optimization) are possible but you should keep in mind that they are, at begining, only a side tool of the round by round simulation. 
+
+Every simulation is **single-threaded and full CPU**. Expect the CPU usage of the core to be 100%. Beware that the max CPU share allowed is used to set an upper limit for the number of simulations that can be conducted in parallel (on separated threads). The failure of one simulation do not affect the behavior of the others of the same batch. The system treats simulations by batches and waits for the end of the batch to jump to the next batch.
+
+#### CLI Usage
 Use the flag -h to ask for help!
 ```
 Usage: ./SocialMatrixSimulation [options]
@@ -38,7 +45,7 @@ Options:
   -R --rounds                       How many rounds?
   -S --simuls                       How many simulations?
   -O --optiGraph                    Should I compute optimal graph?
-  -op --optiPrecision                Precision of the optimal graph 1e{-x}?
+  -op --optiPrecision               Precision of the optimal graph 1e{-x}?
   -P --dimP                         Dimension of the vector of personnality
   -m --memLength                    Length of the memory of past requests
   -s --greedyS                      Share of greedy individuals [0,100]
@@ -57,4 +64,36 @@ Options:
   -a --adjacencyFName               Import adjacency matrix from csv file
   -c --compatibilityFName           Import compatibility matrix from csv file
 ```
+
+Note:
+- If you only want to compute the optimal matrix use `-O=True` and `-R=0`
+
+- `memLength`, `greedyS`, `greedyF`, `clearing`, `utFreq` are only useful in round by round simulations
+
+- `optiPrecision` cannot go beyond 1e-6 in almost every modern system due to the use of floats
+
+- There is no gatekeeper for the CLI instructions, be careful with domains according to the paper.
+
+#### Outputs
+
+At each begining of a simulation, a specific folder is created with the unique-id of the simulation following the pattern `sim_<unique-id>`. In this folder several log files and output files can be found depending on the CLI arguments:
+
+- **Edges log file** (csv): `SMS-Save-Edges-<unique-id>.csv` for round by round simulations. It contains all demands asked by agents. Columns are `"round", "vertex1", "vertex2", "old_weight", "new_weight", "accepted", "forced"`.
+
+- **Utility log file** (csv): `SMS-Save-Utility-<unique-id>.csv` for round by round simulations. It contains the utilities of each agent evaluated at a frequency defined in the CLI. Columns are `"round", "agentid", "utility"`.
+
+- **Vertices log file** (csv): `SMS-Save-Vertices-<unique-id>.csv`. It describes all agents in the simulation (with the value of their individual parameters). Columns are `"round", "agentid", "gamma", "isgreedy", "meandist", "vardist", "maxdist", "P"`. Note that `"meandist", "vardist", "maxdist"` are not computed for pure optimal graph simulations (-1 is written as undefined).
+
+- **Clustering log file** (csv): `SMS-Save-Clustering-<unique-id>.csv` for round by round simulations. It computes the local clustering coefficient of each agent. Each row is the vector of all clustering coefficients for a given round. Beware that the row can contain another undefined value (abandonned global clustering coefficient).
+
+- **AdjacencyMatrix log file** (csv): `SMS-Save-AdjacencyMatrix-<unique-id>.csv` for round by round simulations. Every 250 rounds, the adjacency matrix is logged. Matrices are concatenated by rows. Please note that this log is fully redundant and only here to make data processing easier (the edges log file is often too heavy to be easily processed by R). 
+
+- **OptimalGraph log file** (csv): `SMS-Save-OptimalGraph-<unique-id>.csv` for optimal graph computation. The adjacency matrix is logged, followed by the compatibility matrix. Matrices are concatenated by rows. Please note that the ADAM optimization process stops when it reaches 1 million epochs, whether it has reached convergence or not. 
+
+- **OptimalUtility log file** (csv): `SMS-Save-OptimalUtility-<unique-id>.csv` for optimal graph computation. Outputs in a single column the individual utility that agents are experiencing at optimum. 
+
+- **SimulInfos** (txt): `SMS-SimulInfos-<unique-id>.txt` this files contains all CLI parameters and keeps track of the simulation. Errors and enlapsed time are to be found here.
+
+## Contact
+Please contact Aldric L. if you find any bug in this software by the GitHub issues. Remember that this work is licensed under the GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007.
 

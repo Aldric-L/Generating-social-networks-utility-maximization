@@ -82,15 +82,18 @@ SocialMatrix::~SocialMatrix(){
             }
             
         }
-        SocialMatrix::verticesTrackersManager.saveToCSV(logPath + "SMS-Save-Vertices-"  + logID + ".csv", false);
-        if (SocialMatrix::currentRound != 1){
+        if (!SocialMatrix::verticesTrackersManager.isEmpty())
+            SocialMatrix::verticesTrackersManager.saveToCSV(logPath + "SMS-Save-Vertices-"  + logID + ".csv", false);
+        if (SocialMatrix::currentRound > 1){
             if (SocialMatrix::COMPUTE_CLUSTERING)
                 SocialMatrix::clusteringTrackersManager.addSave(SocialMatrix::computeClusteringCoefficients(&binaryadjacencymatrix));
             
-            SocialMatrix::edgeTrackersManager.saveToCSV(logPath + "SMS-Save-Edges-" + logID + ".csv", false);
-            SocialMatrix::utilityTrackersManager.saveToCSV(logPath + "SMS-Save-Utility-" + logID + ".csv", false);
+            if (!SocialMatrix::edgeTrackersManager.isEmpty())
+                SocialMatrix::edgeTrackersManager.saveToCSV(logPath + "SMS-Save-Edges-" + logID + ".csv", false);
+            if (!SocialMatrix::utilityTrackersManager.isEmpty())
+                SocialMatrix::utilityTrackersManager.saveToCSV(logPath + "SMS-Save-Utility-" + logID + ".csv", false);
             
-            if (SocialMatrix::COMPUTE_CLUSTERING)
+            if (SocialMatrix::COMPUTE_CLUSTERING && !SocialMatrix::clusteringTrackersManager.isEmpty())
                 SocialMatrix::clusteringTrackersManager.saveToCSV(logPath + "SMS-Save-Clustering-" + logID + ".csv", false);
         }
         SocialMatrix::finalAdjacencyMatrixTrackersManager.addSave(SocialMatrix::asAdjacencyMatrix());

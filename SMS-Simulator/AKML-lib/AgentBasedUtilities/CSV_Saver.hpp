@@ -122,6 +122,8 @@ namespace akml {
             file.close();
         }
         
+        inline bool isEmpty() const { return (buffer == "" && memory.size() == 0); }
+        
         inline ~CSV_Saver() {
             for (int it(0); it < memory.size(); it++){
                 delete memory[it];

@@ -41,7 +41,7 @@ class Individual {
         static inline float DEFAULT_KAPPA = 10;
         static inline float GAMMA_MEAN = 9;
         static inline float GAMMA_DISP = 0.35;
-        static inline bool HETEROGENEOUS_P = true;
+        static inline bool HETEROGENEOUS_P = false;
         static inline unsigned short int MEMORY_SIZE = 0;
         static inline unsigned short int P_DIMENSION = 100;
         

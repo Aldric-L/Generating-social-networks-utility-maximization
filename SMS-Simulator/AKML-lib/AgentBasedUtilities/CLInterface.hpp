@@ -329,7 +329,7 @@ class CLManager {
     struct printOneUsage {
         template <typename... Args>
         static void run(const std::tuple<Args...> &t) {
-            std::string space = "                             ";
+            std::string space = "                                      ";
             std::cout << "  -" << std::get<i>(t).getName() << " --"<< std::get<i>(t).getLongName() << space.substr(0, space.size() - std::get<i>(t).getLongName().length()) << std::get<i>(t).getDescription() <<"\n";
         }
     };

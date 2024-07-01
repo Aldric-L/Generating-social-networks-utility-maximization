@@ -69,9 +69,14 @@ int main(int argc, const char * argv[]) {
     
     auto processGame = [&CLOptionsTuple, &shouldITryToFindOptimalGraph, &adjacencyMatExtPath, &compatibilityMatExtPath, &shouldICheckLTCondition](std::size_t rds, std::size_t id, std::size_t batchSize) {
         auto start = std::chrono::high_resolution_clock::now();
+        std::string errorMsgHandler = "";
+        std::size_t optiMatEpochs = 0;
+        std::string logPath = "";
+        std::string logId = "";
+        try{
             SocialMatrix sm;
-            std::string logPath = sm.whereWillYouLog().first;
-            std::string logId = sm.whereWillYouLog().second;
+            logPath = sm.whereWillYouLog().first;
+            logId = sm.whereWillYouLog().second;
             OptimalMatrix optiMatComputer;
             if (compatibilityMatExtPath != ""){
                 auto parsedMat = akml::parseCSVToMatrix<float>(compatibilityMatExtPath, GRAPH_SIZE, GRAPH_SIZE);
@@ -88,40 +93,49 @@ int main(int argc, const char * argv[]) {
             if (shouldICheckLTCondition){
                 if (!sm.checkLoveTriangleCondition()){
                     std::cout << "Simulation " << id << " / " << batchSize << ": Error. The Love Triangle condition is not verified. \n";
+                    errorMsgHandler += "Terminated. The Love Triangle condition is not verified. ";
                     goto endSimulation;
                 }
             }
-        {
-            if (shouldITryToFindOptimalGraph){
-                std::cout << "Simulation " << id << " / " << batchSize << ": Computing the analytical optimal graph...\n";
-                
-                auto optiMatContainer = optiMatComputer.compute(sm.asAdjacencyMatrix(), sm.getIndividuals());
-                std::size_t optiMatEpochs = optiMatContainer.first;
-                auto optiMat = optiMatContainer.second;
-                akml::CSV_Saver<akml::FullMatrixSave<akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE>>> optimalAdjacencyMatrixTrackersManager;
-                optimalAdjacencyMatrixTrackersManager.addSave(optiMat);
-                optimalAdjacencyMatrixTrackersManager.addSave(optiMatComputer.exportAffinityBuffer());
-                optimalAdjacencyMatrixTrackersManager.saveToCSV(logPath + "SMS-Save-OptimalGraph-" + logId + ".csv", false);
-                akml::CSV_Saver<akml::FullMatrixSave<akml::DynamicMatrix<float>>> utilityTrackersManager;
-                utilityTrackersManager.addSave(optiMatComputer.computeObjectiveFunction(optiMat, sm.getIndividuals()));
-                utilityTrackersManager.saveToCSV(logPath + "SMS-Save-OptimalUtility-" + logId + ".csv", false);
-                std::cout << "Simulation " << id << " / " << batchSize << ": Optimal graph computed (" << optiMatEpochs << " / 1000000).\n";
-            }
-            std::cout << "Simulation " << id << " / " << batchSize << ": Processing simulation...\n";
-            unsigned short int inactive_consecutive_rounds_counter(0);
-            for (std::size_t i(0); i < rds; i++){
-                if (inactive_consecutive_rounds_counter == 3 + Individual::MEMORY_SIZE){
-                    std::cout << "Simulation " << id << " / " << batchSize << ": Inactivity detected - Stopping generation at round " << i << "\n";
-                    break;
+            {
+                if (shouldITryToFindOptimalGraph){
+                    std::cout << "Simulation " << id << " / " << batchSize << ": Computing the analytical optimal graph...\n";
+                    
+                    auto optiMatContainer = optiMatComputer.compute(sm.asAdjacencyMatrix(), sm.getIndividuals());
+                    optiMatEpochs = optiMatContainer.first;
+                    auto optiMat = optiMatContainer.second;
+                    akml::CSV_Saver<akml::FullMatrixSave<akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE>>> optimalAdjacencyMatrixTrackersManager;
+                    optimalAdjacencyMatrixTrackersManager.addSave(optiMat);
+                    optimalAdjacencyMatrixTrackersManager.addSave(optiMatComputer.exportAffinityBuffer());
+                    optimalAdjacencyMatrixTrackersManager.saveToCSV(logPath + "SMS-Save-OptimalGraph-" + logId + ".csv", false);
+                    akml::CSV_Saver<akml::FullMatrixSave<akml::DynamicMatrix<float>>> utilityTrackersManager;
+                    utilityTrackersManager.addSave(optiMatComputer.computeObjectiveFunction(optiMat, sm.getIndividuals()));
+                    utilityTrackersManager.saveToCSV(logPath + "SMS-Save-OptimalUtility-" + logId + ".csv", false);
+                    std::cout << "Simulation " << id << " / " << batchSize << ": Optimal graph computed (" << optiMatEpochs << " / 1000000).\n";
                 }
-                
-                if (sm.processARound(static_cast<std::size_t>(rds)) == GRAPH_SIZE)
-                    inactive_consecutive_rounds_counter++;
-                else
-                    inactive_consecutive_rounds_counter=0;
+                std::cout << "Simulation " << id << " / " << batchSize << ": Processing simulation...\n";
+                unsigned short int inactive_consecutive_rounds_counter(0);
+                for (std::size_t i(0); i < rds; i++){
+                    if (inactive_consecutive_rounds_counter == 3 + Individual::MEMORY_SIZE){
+                        std::cout << "Simulation " << id << " / " << batchSize << ": Inactivity detected - Stopping generation at round " << i << "\n";
+                        break;
+                    }
+                    
+                    if (sm.processARound(static_cast<std::size_t>(rds)) == GRAPH_SIZE)
+                        inactive_consecutive_rounds_counter++;
+                    else
+                        inactive_consecutive_rounds_counter=0;
+                }
             }
-        }
         endSimulation:
+         ;
+        }catch (std::exception& e){
+            errorMsgHandler += "Exception: " + (std::string)(e.what()) + " ";
+            std::cout << "Simulation " << id << " / " << batchSize << ": Terminated. " << errorMsgHandler << ".\n";
+        }catch (...){
+            errorMsgHandler += "Unexpected error terminated simulation. ";
+            std::cout << "Simulation " << id << " / " << batchSize << ": Terminated. " << errorMsgHandler << ".\n";
+        }
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> duration = end - start;
         
@@ -133,6 +147,10 @@ int main(int argc, const char * argv[]) {
             akml::CLManager::printOptionsValues(false, CLOptionsTuple);
             std::cout << "--agentsNb=" << GRAPH_SIZE << "\n";
             std::cout << "--executionTime=" << duration.count() << "\n";
+            if (errorMsgHandler != "")
+                std::cout << "--Error=" << errorMsgHandler << "\n";
+            if (shouldITryToFindOptimalGraph)
+                std::cout << "--OptimalGraphEpochs=" << optiMatEpochs << "\n";
             std::cout << "--SMSVersion=" << SMS_VERSION << "\n";
             std::cout.rdbuf(coutbuf);
         }
