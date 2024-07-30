@@ -52,6 +52,7 @@ class SocialMatrix {
         static inline bool COMPUTE_CLEARING = true;
         static inline std::string GLOBAL_LOG_PREFIX = "";
         static inline unsigned short int UTILITY_COMPUTATION_INTERVAL = 10;
+        static inline std::size_t SCOPE_DEPTH = 1;
     
         std::size_t currentRound = 0;
         SocialMatrix();
@@ -61,11 +62,11 @@ class SocialMatrix {
         void initializeLinks();
         void initializeLinks(const akml::DynamicMatrix<float>& adjacencyMatrix);
         void forceEditCompatibilityMatrix(const akml::DynamicMatrix<float>& compatibilityMatrix);
-        bool checkLoveTriangleCondition() const;
+        bool checkLoveTriangleCondition();
         akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1> getIndividualRelations(Individual* indiv);
         akml::Matrix<Individual*, GRAPH_SIZE, 1> getIndividuals();
         Individual* getIndividual(const std::size_t indiv_id);
-        std::vector<SocialMatrix::Link> getIndividualScope(Individual* indiv);
+        std::vector<SocialMatrix::Link> getIndividualScope(Individual* indiv, Individual* original=nullptr, const std::size_t scopeDepth=0);
         void editLink(const Individual* indiv1, const Individual* indiv2, const float newWeight, bool accepted=true, bool forced=false);
         void editLink(SocialMatrix::Link* link, const float newWeight, bool accepted=true, bool forced=false);
         unsigned int processARound(std::size_t totalrounds=0);
@@ -75,7 +76,8 @@ class SocialMatrix {
         akml::Matrix<float, GRAPH_SIZE+1, 1> computeClusteringCoefficients(akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE>* binaryadjacencymatrix = nullptr) const;
         std::pair<std::string, std::string> whereWillYouLog() const;
         inline std::mt19937& getRandomGen() { return gen; }
-        float getCompatibilityBtwnIndividuals(const Individual* indiv1, const Individual* indiv2) const;
+        float getCompatibilityBtwnIndividuals(const Individual* indiv1, const Individual* indiv2);
+        Link* findRelation(const Individual* indiv1, const Individual* indiv2);
 };
 
  /* SocialMatrix_hpp */

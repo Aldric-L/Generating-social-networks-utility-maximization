@@ -13,7 +13,6 @@
 #include <thread>
 #include "AKML-lib/AKML.hpp"
 #include "Constants.hpp"
-#include "UtilityFunction.cpp"
 #include "Individual.hpp"
 #include "SocialMatrix.hpp"
 #include "OptimalMatrix.hpp"
@@ -40,10 +39,12 @@ int main(int argc, const char * argv[]) {
          akml::CLOption<unsigned short int> (&simulationsNb, "S", "simuls", "How many simulations?"),
          akml::CLOption<bool> (&shouldITryToFindOptimalGraph, "O", "optiGraph", "Should I compute optimal graph?"),
          akml::CLOption<unsigned short int> (&OptimalMatrix::MAX_PRECISION, "op", "optiPrecision", "Precision of the optimal graph 1e{-x}?"),
+         akml::CLOption<unsigned long int> (&OptimalMatrix::MAX_ITERATIONS, "oi", "optiIt", "Max. Iterations for finding the optimal graph"),
          akml::CLOption<unsigned short int> (&Individual::P_DIMENSION, "P", "dimP", "Dimension of the vector of personnality"),
          akml::CLOption<unsigned short int> (&Individual::MEMORY_SIZE, "m", "memLength", "Length of the memory of past requests"),
          akml::CLOption<unsigned short int> (&Individual::GREEDY_SHARE, "s", "greedyS", "Share of greedy individuals [0,100]"),
          akml::CLOption<unsigned short int> (&Individual::GREEDY_FREQ, "f", "greedyF", "Frequency of the greedy bonus [0,100]", 10),
+         akml::CLOption<std::size_t> (&SocialMatrix::SCOPE_DEPTH, "d", "scopeDepth", "Individuals' scope depth in the network"),
          akml::CLOption<float> (&Individual::DEFAULT_DELTA, "D", "delta", "Utility parameter", 2),
          akml::CLOption<float> (&Individual::DEFAULT_KAPPA, "K", "kappa", "Utility parameter"),
          akml::CLOption<float> (&Individual::GAMMA_MEAN, "G", "gamma", "Utility parameter", 9),

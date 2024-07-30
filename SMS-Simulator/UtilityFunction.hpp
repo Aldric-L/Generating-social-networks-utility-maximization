@@ -9,6 +9,7 @@
 #define UtilityFunction_hpp
 
 #include "Constants.hpp"
+#include "AKML-lib/Matrices.hpp"
 
 class UtilityFunction {
 public:

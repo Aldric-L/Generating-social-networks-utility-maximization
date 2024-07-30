@@ -191,8 +191,7 @@ akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1> SocialMatrix::getIndividualRe
             incr++;
         }
     }
-    if (incr != GRAPH_SIZE-1)
-        throw std::invalid_argument("Something went really wrong");
+    assert(incr == GRAPH_SIZE-1);
     return linksForIndividual;
 }
 
@@ -204,55 +203,54 @@ Individual* SocialMatrix::getIndividual(const std::size_t indiv_id) {
     return SocialMatrix::individuals[{indiv_id,0}];
 }
 
-std::vector<SocialMatrix::Link> SocialMatrix::getIndividualScope(Individual* indiv) {
+// It is now guaranteed that:
+// - all true relations are returned with the appropriate weight
+// - all pure scope individuals are return with a weight of 0
+// - individuals in scope are always in the "second" position of the link container
+std::vector<SocialMatrix::Link> SocialMatrix::getIndividualScope(Individual* indiv, Individual* original, const std::size_t scopeDepth) {
+    if (scopeDepth > SCOPE_DEPTH)
+        return std::vector<SocialMatrix::Link> ();
+    
+    if (original == nullptr)
+        original = indiv;
+    
     std::vector<SocialMatrix::Link> scope;
-    akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1> linksofIndividual(SocialMatrix::getIndividualRelations(indiv));
-    for (std::size_t level0(0); level0 < GRAPH_SIZE-1; level0++){
-        if (linksofIndividual[{level0, 0}]->weight > 0){
-            Individual* target0 = nullptr;
-            Individual* target1 = nullptr;
-            
-            if (linksofIndividual[{level0, 0}]->first == indiv)
-                target0 = linksofIndividual[{level0, 0}]->second;
-            else
-                target0 = linksofIndividual[{level0, 0}]->first;
-            
-            bool redundant = false;
-            for (int icheck(0); icheck < scope.size(); icheck++){
-                if ((scope[icheck].first == linksofIndividual[{level0, 0}]->first && scope[icheck].second == linksofIndividual[{level0, 0}]->second)
-                    || (scope[icheck].first == linksofIndividual[{level0, 0}]->second && scope[icheck].second == linksofIndividual[{level0, 0}]->first))
-                    redundant = true;
-            }
-            if (!redundant)
-                scope.push_back(*linksofIndividual[{level0, 0}]);
-            
-            akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1> linksofTarget = SocialMatrix::getIndividualRelations(target0);
-            for (std::size_t level1(0); level1 < GRAPH_SIZE-1; level1++){
-                if (linksofTarget[{level1, 0}]->weight > 0){
-                    if (linksofTarget[{level1, 0}]->first == target0)
-                        target1 = linksofTarget[{level1, 0}]->second;
-                    else
-                        target1 = linksofTarget[{level1, 0}]->first;
-                    
-                    if (target0 != target1 && target1 != indiv && target0 != indiv){
-                        Link l;
-                        l.first = indiv;
-                        l.second = target1;
-                        l.weight = linksofTarget[{level1, 0}]->weight * linksofIndividual[{level0, 0}]->weight;
-                        //l.compatibility = akml::inner_product(indiv->getP(), target1->getP()) / Individual::P_DIMENSION;
-                        l.compatibility = getCompatibilityBtwnIndividuals(indiv, target1);
+    
+    if (SCOPE_DEPTH >= GRAPH_SIZE && original == indiv){
+        for (std::size_t indiv_i(0); indiv_i < individuals.getNRows(); indiv_i++){
+            scope.push_back(*(findRelation(indiv, individuals[{indiv_i, 0}])));
+        }
+    }else {
+        akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1> linksofIndividual(SocialMatrix::getIndividualRelations(indiv));
+        for (std::size_t level0(0); level0 < GRAPH_SIZE-1; level0++){
+            if (linksofIndividual[{level0, 0}]->weight > 0){
+                Individual* target = (linksofIndividual[{level0, 0}]->first == indiv) ? linksofIndividual[{level0, 0}]->second : linksofIndividual[{level0, 0}]->first;
+                
+                if (target == original)
+                    continue;
+                
+                Link l;
+                l.first = original;
+                l.second = target;
+                l.weight = (original == indiv) ? linksofIndividual[{level0, 0}]->weight : 0;
+                l.compatibility = (original == indiv) ? linksofIndividual[{level0, 0}]->compatibility : getCompatibilityBtwnIndividuals(original, target);
+                scope.push_back(l);
+                
+                if (scopeDepth < SCOPE_DEPTH){
+                    auto targetsScope = getIndividualScope(target, original, scopeDepth+1);
+                    for (auto& lt : targetsScope){
                         bool redundant = false;
-                        for (int icheck(0); icheck < scope.size(); icheck++){
-                            if ((scope[icheck].first == l.first && scope[icheck].second == l.second)
-                                || (scope[icheck].first == l.second && scope[icheck].second == l.first))
+                        for (auto& li : scope){
+                            if (li.second == lt.second){
                                 redundant = true;
+                                break;
+                            }
                         }
                         if (!redundant)
-                            scope.push_back(l);
+                            scope.push_back(lt);
                     }
                 }
             }
-            
         }
     }
     return scope;
@@ -439,7 +437,7 @@ std::pair<std::string, std::string> SocialMatrix::whereWillYouLog() const {
     return std::make_pair(logPath, logID);
 }
 
-float SocialMatrix::getCompatibilityBtwnIndividuals(const Individual* indiv1, const Individual* indiv2) const {
+SocialMatrix::Link* SocialMatrix::findRelation(const Individual* indiv1, const Individual* indiv2) {
     const std::size_t id1 = indiv1->agentid;
     const std::size_t id2 = indiv2->agentid;
     
@@ -453,11 +451,15 @@ float SocialMatrix::getCompatibilityBtwnIndividuals(const Individual* indiv1, co
     
     std::size_t pos = cols+j;
     assert((links[pos].first == indiv1 && links[pos].second == indiv2) || (links[pos].first == indiv2 && links[pos].second == indiv1));
-    return links[pos].compatibility;
+    return &links[pos];
+}
+
+float SocialMatrix::getCompatibilityBtwnIndividuals(const Individual* indiv1, const Individual* indiv2) {
+    return SocialMatrix::findRelation(indiv1, indiv2)->compatibility;
 }
 
 
-bool SocialMatrix::checkLoveTriangleCondition() const {
+bool SocialMatrix::checkLoveTriangleCondition() {
     for (std::size_t i(0); i < GRAPH_SIZE; i++){
         std::size_t checks = 0;
         for (std::size_t m(0); m < GRAPH_SIZE; m++){

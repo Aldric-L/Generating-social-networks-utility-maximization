@@ -67,50 +67,8 @@ akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1> Individual::getRelations(){
     return this->world->getIndividualRelations(this);
 }
 
-std::vector<SocialMatrix::Link> Individual::getScope() {
+std::vector<SocialMatrix::Link> Individual::getScope() {    
     return this->world->getIndividualScope(this);
-}
-
-/*
- * For utility computing and take action processing, we build 4 matrices:
- * - P_S: the union of the matrices P of individuals in scope
- * - alpha: a column vector of relation weights fot each individual in scope (same order of P_S)
- * - beta: a column vector of pointers to the individuals in the scope
- * - eta: a column vector of pointers to the relations in the scope
- */
-Individual::PSAndAlphaTuple Individual::buildPSAndAlpha(const akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1>& relations){
-    // We count the number of relations that truly exist
-    std::size_t effectiveRelationCount = 0;
-    for (std::size_t i(0); i < GRAPH_SIZE-1; i++)
-        if ((relations)[{i,0}]->weight > 0)
-            effectiveRelationCount++;
-    
-    // Compatibility matrix
-    akml::DynamicMatrix<float> P_prod (effectiveRelationCount, 1);
-    // Weights matrix
-    akml::DynamicMatrix<float> alpha (effectiveRelationCount, 1);
-    // Pointers to individual matrix
-    akml::DynamicMatrix<Individual*> beta (effectiveRelationCount, 1);
-    // Pointers to relation matrix
-    akml::DynamicMatrix<SocialMatrix::Link*> eta (effectiveRelationCount, 1);
-    
-    std::size_t internIncrement (0);
-    for (std::size_t i(0); i < GRAPH_SIZE-1; i++){
-        if (relations[{i,0}]->weight > 0){
-            if (relations[{i,0}]->first == this){
-                beta(internIncrement+1, 1) = relations[{i,0}]->second;
-            }else {
-                beta(internIncrement+1, 1) = relations[{i,0}]->first;
-            }
-            eta(internIncrement+1, 1) = relations[{i,0}];
-            alpha(internIncrement+1, 1) = relations[{i,0}]->weight;
-            P_prod(internIncrement+1, 1) = relations[{i,0}]->compatibility;
-            if (relations[{i,0}]->compatibility == -1)
-                throw std::runtime_error("Compatibility not properly stored in the relation.");
-            internIncrement++;
-        }
-    }
-    return { .P_prod = P_prod, .alpha = alpha, .beta = beta, .eta = eta};
 }
 
 float Individual::computeUtility(akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1>* relations) {
@@ -156,10 +114,8 @@ float Individual::computeUtility(akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1,
     return utilityFunc->function(P_prod, alpha);
 }
 
-akml::DynamicMatrix<float> Individual::computeUtilityGrad(akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1>& relations, Individual::PSAndAlphaTuple& PS_Alpha) {
-    //akml::DynamicMatrix<float> P_prod (akml::matrix_product(akml::transpose(PS_Alpha.P_S), this->P));
-    //P_prod = P_prod * (1/(float)P_DIMENSION);
-    akml::DynamicMatrix<float> grad = utilityFunc->derivative(PS_Alpha.P_prod, PS_Alpha.alpha);
+akml::DynamicMatrix<float> Individual::computeUtilityGrad(const akml::DynamicMatrix<float>& P_prod, const akml::DynamicMatrix<float>& alpha) {
+    akml::DynamicMatrix<float> grad = utilityFunc->derivative(P_prod, alpha);
     
     float maxgrad = akml::max(grad);
     if (maxgrad > 1){
@@ -184,75 +140,59 @@ akml::DynamicMatrix<float> Individual::computeUtilityGrad(akml::Matrix<SocialMat
  * If we need to ask someone, we put the target in the 2nd component.
  */
 std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individual::preprocessTakeAction(Individual* target){
-    akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1> relations = this->getRelations();
-    akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1> rel_temp;
     std::vector<SocialMatrix::Link> scope = this->getScope();
+    akml::DynamicMatrix<SocialMatrix::Link*> scope_relations (scope.size(), 1);
+    akml::DynamicMatrix<SocialMatrix::Link*> true_relations (scope.size(), 1);
+    akml::DynamicMatrix<float> alpha (scope.size(), 1);
+    akml::DynamicMatrix<float> P_Prod (scope.size(), 1);
+
     
-    // Because we want to distinguish individuals that are in the scope but with whom there is no link and those  no link
-    // with whom there is no link at all, we create a fake little link of 0.00001 for individuals in scope.
+    for (std::size_t rel(0); rel < scope.size(); rel++){
+        scope_relations[{rel, 0}] = &(scope.at(rel));
+        true_relations[{rel, 0}] = this->world->findRelation(this, scope.at(rel).second);
+        alpha[{rel, 0}] = scope.at(rel).weight;
+        P_Prod[{rel, 0}] = scope.at(rel).compatibility;
+        
+        // Because we want to distinguish individuals that are in the scope but with whom there is no link and those  no link
+        // with whom there is no link at all, we create a fake little link of 0.00001 for individuals in scope.
+        if (scope.at(rel).weight == 0)
+            scope.at(rel).weight = 0.0001;
+    }
+    
+    
     // If greedy we select create a new scope entry
     long long int greedy_target (-1);
     if (Individual::is_greedy){
         std::uniform_int_distribution<unsigned short int> distribution(0,GRAPH_SIZE-2);
         greedy_target = distribution(this->world->getRandomGen());
         if (Individual::GREEDY_FREQ < 100)
-            greedy_target = (((greedy_target+1)/(GRAPH_SIZE-1))*100 < Individual::GREEDY_FREQ) ? distribution(this->world->getRandomGen()) : -1;
-    }
-    
-    
-    // Pointers to relation matrix
-    std::size_t internIncrement (0);
-    akml::DynamicMatrix<SocialMatrix::Link*> true_eta (GRAPH_SIZE-1, 1);
-    for (std::size_t rel(0); rel < GRAPH_SIZE-1; rel++){
-        rel_temp[{rel, 0}] = new SocialMatrix::Link;
-        *rel_temp[{rel, 0}] = *relations[{rel, 0}];
-        if (relations[{rel, 0}]->weight == 0){
-            for (std::size_t i(0); i < scope.size(); i++){
-                if ((scope[i].first == this && relations[{rel, 0}]->first == this && scope[i].second == relations[{rel, 0}]->second)
-                    || (scope[i].first == this && relations[{rel, 0}]->second == this && scope[i].second == relations[{rel, 0}]->first)
-                    || (scope[i].second == this && relations[{rel, 0}]->second == this && scope[i].first == relations[{rel, 0}]->first)
-                    || (scope[i].second == this && relations[{rel, 0}]->first == this && scope[i].first == relations[{rel, 0}]->second)){
-                    rel_temp[{rel, 0}]->weight = 0.00001;
+            greedy_target = ((greedy_target+1)*100 < Individual::GREEDY_FREQ*(GRAPH_SIZE-1)) ? distribution(this->world->getRandomGen()) : -1;
+        
+        if (greedy_target != -1){
+            bool found = false;
+            for (auto& rel : scope){
+                if (rel.second->agentid == greedy_target){
+                    found = true;
                     break;
                 }
             }
-            
-            if (greedy_target != -1 && rel == greedy_target)
-                rel_temp[{static_cast<std::size_t>(greedy_target), 0}]->weight = 0.00002;
-        }
-        if (rel_temp[{rel, 0}]->weight > 0){
-            true_eta(internIncrement+1, 1) = relations[{rel, 0}];
-            internIncrement++;
+            if (!found){
+                auto target = this->world->getIndividual(greedy_target);
+                scope.emplace_back(this,target, 0.f, this->world->getCompatibilityBtwnIndividuals(this, target));
+            }
         }
     }
-    
-    // No relation found
-    if (internIncrement == 0){
-        for (std::size_t rel(0); rel < GRAPH_SIZE-1; rel++)
-            delete rel_temp[{rel, 0}];
         
+    akml::DynamicMatrix<float> grad (Individual::computeUtilityGrad(P_Prod, alpha));
+    
+    if (grad.getNRows() == 0){
         SocialMatrix::Link newlinkwanted (nullptr, nullptr, 0);
         return std::make_tuple(nullptr, nullptr, newlinkwanted, false);
     }
     
-    true_eta.resize(internIncrement, 1);
-
-    Individual::PSAndAlphaTuple PS_Alpha = this->buildPSAndAlpha(rel_temp);
-    
-    //We delete temp pointers
-    for (std::size_t rel(0); rel < GRAPH_SIZE-1; rel++)
-        delete rel_temp[{rel, 0}];
-    
-    akml::DynamicMatrix<float> grad (Individual::computeUtilityGrad(relations, PS_Alpha));
-    //akml::cout_matrix(grad);
-    //std::cout << "Now let's reduce the grad to accessible individuals (scope=" << scope.size() << ")" << std::endl;
     for (std::size_t i(0); i < grad.getNRows(); i++){
-        // You can't select an individual that you don't see (no freehate)
-        // Since the implementation of dynamic matrices this extra-care is not relevant
-        if (PS_Alpha.beta(i+1, 1) == nullptr){
-            grad(i+1, 1) = 0;
         // You can't reduce a friendship that does not exist
-        }else if (grad(i+1, 1) < 0 && PS_Alpha.alpha(i+1, 1) <= 0.0001 ){
+        if (grad(i+1, 1) < 0 && true_relations(i+1, 1)->weight == 0 ){
             grad(i+1, 1) = 0;
         }
     }
@@ -263,7 +203,7 @@ std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individua
             float lmax = -MAXFLOAT;
             for (std::size_t i(0); i < grad.getNRows(); i++){
                 if (std::abs(grad[{i,0}]) > lmax) {
-                    if (std::find(memoryBuffer.begin(), memoryBuffer.end(), PS_Alpha.beta[{i, 0}]) != memoryBuffer.end()){
+                    if (std::find(memoryBuffer.begin(), memoryBuffer.end(), scope_relations[{i, 0}]->second) != memoryBuffer.end()){
                         grad[{i,0}] = 0.f;
                     }else{
                         max_i = i;
@@ -284,20 +224,20 @@ std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individua
         step = std::min(step, (float)MAX_LINK_CHANGE);
         step = std::max(step, (float)-MAX_LINK_CHANGE);
         
-        float mov = std::max(0.f, ((PS_Alpha.alpha(max_i+1, 1) < 0.01) ? 0.f : PS_Alpha.alpha(max_i+1, 1)) + step);
+        float mov = std::max(0.f, ((alpha(max_i+1, 1) < 0.01) ? 0.f : alpha(max_i+1, 1)) + step);
         
         if (MEMORY_SIZE > 0){
-            memoryBuffer.push_front(PS_Alpha.beta[{max_i, 0}]);
+            memoryBuffer.push_front(scope_relations[{max_i, 0}]->second);
             if (memoryBuffer.size() > MEMORY_SIZE)
                 memoryBuffer.pop_back();
         }
-        SocialMatrix::Link newlinkwanted (true_eta(max_i+1, 1)->first, true_eta(max_i+1, 1)->second, mov);
+        SocialMatrix::Link newlinkwanted (true_relations(max_i+1, 1)->first, true_relations(max_i+1, 1)->second, mov);
         
-        return std::make_tuple(true_eta(max_i+1, 1), PS_Alpha.beta(max_i+1, 1), newlinkwanted, (grad(max_i+1, 1) <= 0));
+        return std::make_tuple(true_relations(max_i+1, 1), scope_relations[{max_i, 0}]->second, newlinkwanted, (grad(max_i+1, 1) <= 0));
     }else {
         long int target_i = -1;
-        for (std::size_t i(0); i < PS_Alpha.beta.getNRows(); i++){
-            if (PS_Alpha.beta(i+1, 1) == target){
+        for (std::size_t i(0); i < scope_relations.getNRows(); i++){
+            if (scope_relations(i+1, 1)->second == target){
                 target_i = i;
                 break;
             }
@@ -309,11 +249,11 @@ std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individua
         
         // too little desire
         if (std::abs(grad(target_i+1, 1)) < MIN_LINK_WEIGHT)
-            return std::make_tuple(true_eta(target_i+1, 1), PS_Alpha.beta(target_i+1, 1), SocialMatrix::Link (true_eta(target_i+1, 1)->first, true_eta(target_i+1, 1)->second, 0.f), false);
+            return std::make_tuple(true_relations(target_i+1, 1), scope_relations(target_i+1, 1)->second, SocialMatrix::Link (true_relations(target_i+1, 1)->first, true_relations(target_i+1, 1)->second, 0.f), false);
         
-        float mov = std::max(0.f, ((PS_Alpha.alpha(target_i+1, 1) <= 0.0001) ? 0.f : PS_Alpha.alpha(target_i+1, 1)) + grad(target_i+1, 1));
+        float mov = std::max(0.f, ((alpha(target_i+1, 1) <= 0.0001) ? 0.f : alpha(target_i+1, 1)) + grad(target_i+1, 1));
         
-        return std::make_tuple(true_eta(target_i+1, 1), PS_Alpha.beta(target_i+1, 1), SocialMatrix::Link (true_eta(target_i+1, 1)->first, true_eta(target_i+1, 1)->second, mov), (grad(target_i+1, 1) <= 0));
+        return std::make_tuple(true_relations(target_i+1, 1), scope_relations(target_i+1, 1)->second, SocialMatrix::Link (true_relations(target_i+1, 1)->first, true_relations(target_i+1, 1)->second, mov), (grad(target_i+1, 1) <= 0));
         
     }
     
