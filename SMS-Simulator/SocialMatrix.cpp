@@ -32,10 +32,14 @@ SocialMatrix::SocialMatrix() : gen(std::random_device{}()){
     logID = std::to_string(t);
     
     logPath = GLOBAL_LOG_PREFIX;
-    #if MODE_FOLDER_LOG
-    logPath += "sim_" + logID + "/";
-    #endif
-    std::filesystem::create_directories(logPath);
+    //#if MODE_FOLDER_LOG
+    if (SocialMatrix::MODE_FOLDER_LOG)
+        logPath += "sim_" + logID + "/";
+    //#endif
+    if (logPath != "" && logPath != " " && logPath != "/" && logPath != "." && logPath != "..")
+        std::filesystem::create_directories(logPath);
+    else
+        logPath = "";
 }
 
 SocialMatrix::SocialMatrix(const akml::DynamicMatrix<float>& compatibilityMatrix) : SocialMatrix::SocialMatrix() {
@@ -218,7 +222,14 @@ std::vector<SocialMatrix::Link> SocialMatrix::getIndividualScope(Individual* ind
     
     if (SCOPE_DEPTH >= GRAPH_SIZE && original == indiv){
         for (std::size_t indiv_i(0); indiv_i < individuals.getNRows(); indiv_i++){
-            scope.push_back(*(findRelation(indiv, individuals[{indiv_i, 0}])));
+            if (individuals[{indiv_i, 0}] != indiv){
+                Link l;
+                l.first = original;
+                l.second = individuals[{indiv_i, 0}];
+                l.weight = findRelation(indiv, individuals[{indiv_i, 0}])->weight;
+                l.compatibility = findRelation(indiv, individuals[{indiv_i, 0}])->compatibility;
+                scope.push_back(l);
+            }
         }
     }else {
         akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1> linksofIndividual(SocialMatrix::getIndividualRelations(indiv));
@@ -236,14 +247,16 @@ std::vector<SocialMatrix::Link> SocialMatrix::getIndividualScope(Individual* ind
                 l.compatibility = (original == indiv) ? linksofIndividual[{level0, 0}]->compatibility : getCompatibilityBtwnIndividuals(original, target);
                 scope.push_back(l);
                 
-                if (scopeDepth < SCOPE_DEPTH){
+                if (scopeDepth < SCOPE_DEPTH && scope.size() < GRAPH_SIZE){
                     auto targetsScope = getIndividualScope(target, original, scopeDepth+1);
                     for (auto& lt : targetsScope){
-                        bool redundant = false;
-                        for (auto& li : scope){
-                            if (li.second == lt.second){
-                                redundant = true;
-                                break;
+                        bool redundant = (lt.second == indiv || lt.second == original);
+                        if (!redundant){
+                            for (auto& li : scope){
+                                if (li.second == lt.second){
+                                    redundant = true;
+                                    break;
+                                }
                             }
                         }
                         if (!redundant)
@@ -438,6 +451,7 @@ std::pair<std::string, std::string> SocialMatrix::whereWillYouLog() const {
 }
 
 SocialMatrix::Link* SocialMatrix::findRelation(const Individual* indiv1, const Individual* indiv2) {
+    assert(indiv1 != indiv2);
     const std::size_t id1 = indiv1->agentid;
     const std::size_t id2 = indiv2->agentid;
     

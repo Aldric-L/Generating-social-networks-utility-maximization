@@ -56,6 +56,7 @@ int main(int argc, const char * argv[]) {
          akml::CLOption<unsigned short int> (&SocialMatrix::UTILITY_COMPUTATION_INTERVAL, "u", "utFreq", "Frequency of the utility log"),
          akml::CLOption<bool> (&SocialMatrix::SHOULD_I_LOG, "l", "log", "Should we log results?", true),
          akml::CLOption<std::string> (&SocialMatrix::GLOBAL_LOG_PREFIX, "L", "logPrefix", "Select a subfolder for registering logs"),
+         akml::CLOption<bool> (&SocialMatrix::MODE_FOLDER_LOG, "lF", "logSubFolder", "Create a subfolder for each simulation"),
          akml::CLOption<std::string> (&adjacencyMatExtPath, "a", "adjacencyFName", "Import adjacency matrix from csv file"),
          akml::CLOption<std::string> (&compatibilityMatExtPath, "c", "compatibilityFName", "Import compatibility matrix from csv file"));
     

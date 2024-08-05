@@ -141,34 +141,19 @@ akml::DynamicMatrix<float> Individual::computeUtilityGrad(const akml::DynamicMat
  */
 std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individual::preprocessTakeAction(Individual* target){
     std::vector<SocialMatrix::Link> scope = this->getScope();
-    akml::DynamicMatrix<SocialMatrix::Link*> scope_relations (scope.size(), 1);
-    akml::DynamicMatrix<SocialMatrix::Link*> true_relations (scope.size(), 1);
-    akml::DynamicMatrix<float> alpha (scope.size(), 1);
-    akml::DynamicMatrix<float> P_Prod (scope.size(), 1);
-
-    
-    for (std::size_t rel(0); rel < scope.size(); rel++){
-        scope_relations[{rel, 0}] = &(scope.at(rel));
-        true_relations[{rel, 0}] = this->world->findRelation(this, scope.at(rel).second);
-        alpha[{rel, 0}] = scope.at(rel).weight;
-        P_Prod[{rel, 0}] = scope.at(rel).compatibility;
-        
-        // Because we want to distinguish individuals that are in the scope but with whom there is no link and those  no link
-        // with whom there is no link at all, we create a fake little link of 0.00001 for individuals in scope.
-        if (scope.at(rel).weight == 0)
-            scope.at(rel).weight = 0.0001;
-    }
-    
     
     // If greedy we select create a new scope entry
     long long int greedy_target (-1);
-    if (Individual::is_greedy){
+    if (Individual::is_greedy && SocialMatrix::SCOPE_DEPTH < GRAPH_SIZE){
         std::uniform_int_distribution<unsigned short int> distribution(0,GRAPH_SIZE-2);
         greedy_target = distribution(this->world->getRandomGen());
         if (Individual::GREEDY_FREQ < 100)
             greedy_target = ((greedy_target+1)*100 < Individual::GREEDY_FREQ*(GRAPH_SIZE-1)) ? distribution(this->world->getRandomGen()) : -1;
         
         if (greedy_target != -1){
+            while (greedy_target == this->agentid)
+                greedy_target = distribution(this->world->getRandomGen());
+            
             bool found = false;
             for (auto& rel : scope){
                 if (rel.second->agentid == greedy_target){
@@ -181,6 +166,22 @@ std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individua
                 scope.emplace_back(this,target, 0.f, this->world->getCompatibilityBtwnIndividuals(this, target));
             }
         }
+    }
+    
+    akml::DynamicMatrix<SocialMatrix::Link*> scope_relations (scope.size(), 1);
+    akml::DynamicMatrix<SocialMatrix::Link*> true_relations (scope.size(), 1);
+    akml::DynamicMatrix<float> alpha (scope.size(), 1);
+    akml::DynamicMatrix<float> P_Prod (scope.size(), 1);
+    for (std::size_t rel(0); rel < scope.size(); rel++){
+        scope_relations[{rel, 0}] = &(scope.at(rel));
+        true_relations[{rel, 0}] = this->world->findRelation(this, scope.at(rel).second);
+        alpha[{rel, 0}] = scope.at(rel).weight;
+        P_Prod[{rel, 0}] = scope.at(rel).compatibility;
+        
+        // Because we want to distinguish individuals that are in the scope but with whom there is no link and those  no link
+        // with whom there is no link at all, we create a fake little link of 0.00001 for individuals in scope.
+        if (scope.at(rel).weight == 0)
+            scope.at(rel).weight = 0.0001;
     }
         
     akml::DynamicMatrix<float> grad (Individual::computeUtilityGrad(P_Prod, alpha));

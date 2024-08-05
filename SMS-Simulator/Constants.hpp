@@ -7,7 +7,7 @@
 
 #include "CMakeConsts.h"
 
-#define SMS_VERSION "0.6 30/07/24"
+#define SMS_VERSION "0.61 04/08/24"
 
 #include <stdio.h>
 #include <iostream>
@@ -34,7 +34,7 @@
 #endif
 
 #define MODE_ECO_LOG 0
-#define MODE_FOLDER_LOG 1
+//#define MODE_FOLDER_LOG 1
 
 #define DEPRECIATION_RATE (0.001)
 #define MIN_LINK_WEIGHT (0.005)
