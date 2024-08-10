@@ -13,10 +13,8 @@ float ALKYUtility::function(const akml::DynamicMatrix<float>& affinityVector, co
     float RHS1 = 0;
     float RHS2 = 0;
     for (std::size_t i(0); i < weightsVector.getNRows(); i++){
-        if (weightsVector[{i, 0}] > 0){
-            RHS1 += std::pow(weightsVector[{i, 0}], gamma) / (1.f - std::pow(weightsVector[{i, 0}], gamma));
-            RHS2 += weightsVector[{i, 0}];
-        }
+        RHS1 += std::pow(weightsVector[{i, 0}], gamma) / (1.f - std::pow(weightsVector[{i, 0}], gamma));
+        RHS2 += weightsVector[{i, 0}];
     }
     RHS2 = std::pow(RHS2, delta);
     return LHS - RHS1 - RHS2;
@@ -35,7 +33,7 @@ akml::DynamicMatrix<float> ALKYUtility::derivative(const akml::DynamicMatrix<flo
     float sumWeights = delta * std::pow(akml::sum_column(weightsVector), delta-1);
     
     for (std::size_t i(0); i < gradient.getNRows(); i++)
-        gradient[{i, 0}] = (weightsVector[{i, 0}] > 0) ? affinityVector[{i, 0}] * kappa - sumWeights - (gamma * std::pow(weightsVector[{i, 0}], gamma-1) / std::pow(1.f - std::pow(weightsVector[{i, 0}], gamma), 2)) : 0;
+        gradient[{i, 0}] = affinityVector[{i, 0}] * kappa - sumWeights - (gamma * std::pow(weightsVector[{i, 0}], gamma-1) / std::pow(1.f - std::pow(weightsVector[{i, 0}], gamma), 2));
     
     return gradient;
 }

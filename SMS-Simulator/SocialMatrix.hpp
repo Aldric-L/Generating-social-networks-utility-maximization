@@ -13,10 +13,12 @@
 #include "AKML-lib/AgentBasedUtilities/Save.hpp"
 #include "AKML-lib/AgentBasedUtilities/CSV_Saver.hpp"
 
+
 class Individual;
 
 class SocialMatrix {
     public:
+        enum LOG_MODE { NONE, NO_EDGES, ALL};
         struct Link {
             Individual* first;
             Individual* second;
@@ -47,14 +49,19 @@ class SocialMatrix {
         std::string logID = "";
 
     public:
-        static inline bool SHOULD_I_LOG = true;
+        static inline std::function<float(const float)> sig = [](const float x) {return 1/(1+std::exp(-x));};
+        static inline std::function<float(const float)> sigDerivative = [](const float x) { return (std::isinf(x)) ? 0.f : std::exp(-x)/std::pow(1+std::exp(-x),2); };
+        static inline std::function<float(const float)> sigInverse = [](const float x) {return std::log(x/(1.f-x));};
+        
+        static inline SocialMatrix::LOG_MODE SELECTED_LOG_MODE = SocialMatrix::LOG_MODE::ALL;
         static inline bool COMPUTE_CLUSTERING = true;
         static inline bool COMPUTE_CLEARING = true;
         static inline std::string GLOBAL_LOG_PREFIX = "";
         static inline bool MODE_FOLDER_LOG = true;
         static inline unsigned short int UTILITY_COMPUTATION_INTERVAL = 10;
         static inline std::size_t SCOPE_DEPTH = 1;
-    
+        static inline unsigned short int INIT_DENSITY_FACTOR = 4;
+
         std::size_t currentRound = 0;
         SocialMatrix();
         SocialMatrix(const akml::DynamicMatrix<float>& compatibilityMatrix);
@@ -70,7 +77,7 @@ class SocialMatrix {
         std::vector<SocialMatrix::Link> getIndividualScope(Individual* indiv, Individual* original=nullptr, const std::size_t scopeDepth=0);
         void editLink(const Individual* indiv1, const Individual* indiv2, const float newWeight, bool accepted=true, bool forced=false);
         void editLink(SocialMatrix::Link* link, const float newWeight, bool accepted=true, bool forced=false);
-        unsigned int processARound(std::size_t totalrounds=0);
+        std::size_t processARound(std::size_t totalrounds=0);
         akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> asAdjacencyMatrix() const;
         akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> asBinaryAdjacencyMatrix(akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE>* adjacencymatrix = nullptr) const;
         akml::Matrix<std::size_t, GRAPH_SIZE, GRAPH_SIZE> computeDegreesOfSeparation(akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE>* binaryadjacencymatrix = nullptr) const;

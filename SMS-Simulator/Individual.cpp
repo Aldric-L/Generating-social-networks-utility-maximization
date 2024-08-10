@@ -11,7 +11,7 @@
 
 /*
  * Each individual is constructed with a binary matrix P of dim P_DIMENSION
- * The parameters gamma, is_greedy are random (N(9, 0.35) and U([1, 100-GREEDY_SHARE])
+ * The parameters gamma, is_greedy are random (N(GAMMA_MEAN, GAMMA_DISP) and U([1, 100-GREEDY_SHARE])
  * Delta is fixed to 2
  */
 Individual::Individual(SocialMatrix& world, unsigned long int agentid) : kappa(DEFAULT_KAPPA), delta(DEFAULT_DELTA), world(&world), agentid(agentid), P(Individual::P_DIMENSION, 1)/*, gen(std::random_device{}())*/{
@@ -80,11 +80,11 @@ float Individual::computeUtility(akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1,
     }
     std::size_t effectiveRelationCount = 0;
     for (std::size_t i(0); i < GRAPH_SIZE-1; i++){
-        if ((*relations)[{i,0}]->weight > 0){
+        if (SocialMatrix::sig((*relations)[{i,0}]->weight) > 0){
             // We clean relations that are far too weak
-            if ((*relations)[{i,0}]->weight < MIN_LINK_WEIGHT)
-                (*relations)[{i,0}]->weight = 0;
-            else
+            //if ((*relations)[{i,0}]->weight < MIN_LINK_WEIGHT)
+            //    (*relations)[{i,0}]->weight = SocialMatrix::sigInverse(0);
+            //else
                 effectiveRelationCount++;
             
         }
@@ -101,9 +101,9 @@ float Individual::computeUtility(akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1,
 
     std::size_t internIncrement (0);
     for (std::size_t i(0); i < GRAPH_SIZE-1; i++){
-        if ((*relations)[{i,0}]->weight > 0){
+        if (SocialMatrix::sig((*relations)[{i,0}]->weight) > 0){
             P_prod(internIncrement+1, 1) = (*relations)[{i,0}]->compatibility;
-            alpha(internIncrement+1, 1) = (*relations)[{i,0}]->weight;
+            alpha(internIncrement+1, 1) = SocialMatrix::sig((*relations)[{i,0}]->weight);
             internIncrement++;
         }
     }
@@ -115,25 +115,14 @@ float Individual::computeUtility(akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1,
 }
 
 akml::DynamicMatrix<float> Individual::computeUtilityGrad(const akml::DynamicMatrix<float>& P_prod, const akml::DynamicMatrix<float>& alpha) {
-    akml::DynamicMatrix<float> grad = utilityFunc->derivative(P_prod, alpha);
-    
-    float maxgrad = akml::max(grad);
-    if (maxgrad > 1){
-        grad = 0.01 * grad;
-    }else if (maxgrad > 0.1){
-        grad = 0.1 * grad;
-    }
-    return grad;
+    return akml::hadamard_product(utilityFunc->derivative(P_prod, akml::transform(alpha, SocialMatrix::sig)), akml::transform(alpha, (std::function<float(float)>)[&](float x){return (std::isinf(x)) ? SocialMatrix::sigDerivative(SocialMatrix::sigInverse(MIN_LINK_WEIGHT2/2)) : SocialMatrix::sigDerivative(x); }));
 }
 
 /*
  * preprocessTakeAction is a method that chooses what action to do in two cases: when it is turn for the individual to play,
  * or when he is asked to answer to a call (target is here a pointer to the asker).
  *
- * In both cases, this method computes a fake relation matrix with all individuals in scope, in order to give it to
- * the computeUtilityGrad method.
- *
- * If it is his turn: we process an argmax in abs on the grad to moove in the direction of the higher coefficient.
+ * If it is his turn: we process a softmax in abs on the grad to move in the direction of the higher coefficient.
  * If he is asked to answer a call, we only consider the relevant coefficient.
  *
  * If the action is negative, the function returns the desired action but with the 2nd component in nullptr
@@ -141,16 +130,18 @@ akml::DynamicMatrix<float> Individual::computeUtilityGrad(const akml::DynamicMat
  */
 std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individual::preprocessTakeAction(Individual* target){
     std::vector<SocialMatrix::Link> scope = this->getScope();
+    // target_i is the position in scope of the target. If target is not nullptr, it is the position of target. Else, it is the position of the selected individual.
+    std::size_t target_i;
     
     // If greedy we select create a new scope entry
-    long long int greedy_target (-1);
+    std::size_t greedy_target (std::numeric_limits<std::size_t>::infinity());
     if (Individual::is_greedy && SocialMatrix::SCOPE_DEPTH < GRAPH_SIZE){
-        std::uniform_int_distribution<unsigned short int> distribution(0,GRAPH_SIZE-2);
+        std::uniform_int_distribution<unsigned short int> distribution(0,GRAPH_SIZE-1);
         greedy_target = distribution(this->world->getRandomGen());
         if (Individual::GREEDY_FREQ < 100)
-            greedy_target = ((greedy_target+1)*100 < Individual::GREEDY_FREQ*(GRAPH_SIZE-1)) ? distribution(this->world->getRandomGen()) : -1;
+            greedy_target = ((greedy_target)*100 < Individual::GREEDY_FREQ*(GRAPH_SIZE-1)) ? distribution(this->world->getRandomGen()) : std::numeric_limits<std::size_t>::infinity();
         
-        if (greedy_target != -1){
+        if (greedy_target != std::numeric_limits<std::size_t>::infinity()){
             while (greedy_target == this->agentid)
                 greedy_target = distribution(this->world->getRandomGen());
             
@@ -162,9 +153,20 @@ std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individua
                 }
             }
             if (!found){
-                auto target = this->world->getIndividual(greedy_target);
-                scope.emplace_back(this,target, 0.f, this->world->getCompatibilityBtwnIndividuals(this, target));
+                auto greedy_target_indiv = this->world->getIndividual(greedy_target);
+                scope.emplace_back(this,greedy_target_indiv, SocialMatrix::sigInverse(0.f), this->world->getCompatibilityBtwnIndividuals(this, greedy_target_indiv));
             }
+        }
+    }
+    
+    // If we have been asked to answer to someone that we don't have in scope (it must be a greedy individual) we add it in the scope
+    if (target != nullptr){
+        auto pos_i = std::find_if(scope.begin(), scope.end(), [target](const SocialMatrix::Link& element){ return element.second == target;});
+        if (pos_i == scope.end()){
+            scope.emplace_back(this,target, SocialMatrix::sigInverse(0.f), this->world->getCompatibilityBtwnIndividuals(this, target));
+            target_i = scope.size()-1;
+        }else {
+            target_i = pos_i - scope.begin();
         }
     }
     
@@ -173,90 +175,101 @@ std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> Individua
     akml::DynamicMatrix<float> alpha (scope.size(), 1);
     akml::DynamicMatrix<float> P_Prod (scope.size(), 1);
     for (std::size_t rel(0); rel < scope.size(); rel++){
+        // We build scope relations because it has links with the target in .second contrary to true relations...
         scope_relations[{rel, 0}] = &(scope.at(rel));
         true_relations[{rel, 0}] = this->world->findRelation(this, scope.at(rel).second);
         alpha[{rel, 0}] = scope.at(rel).weight;
         P_Prod[{rel, 0}] = scope.at(rel).compatibility;
-        
-        // Because we want to distinguish individuals that are in the scope but with whom there is no link and those  no link
-        // with whom there is no link at all, we create a fake little link of 0.00001 for individuals in scope.
-        if (scope.at(rel).weight == 0)
-            scope.at(rel).weight = 0.0001;
     }
         
     akml::DynamicMatrix<float> grad (Individual::computeUtilityGrad(P_Prod, alpha));
     
-    if (grad.getNRows() == 0){
-        SocialMatrix::Link newlinkwanted (nullptr, nullptr, 0);
-        return std::make_tuple(nullptr, nullptr, newlinkwanted, false);
-    }
+    if (grad.getNRows() == 0)
+        return std::make_tuple(nullptr, nullptr, SocialMatrix::Link (nullptr, nullptr, 0), false);
     
     for (std::size_t i(0); i < grad.getNRows(); i++){
         // You can't reduce a friendship that does not exist
-        if (grad(i+1, 1) < 0 && true_relations(i+1, 1)->weight == 0 ){
-            grad(i+1, 1) = 0;
-        }
+        if (grad[{i, 0}] < 0 && true_relations[{i, 0}]->weight <= SocialMatrix::sigInverse(0.f) )
+            grad[{i, 0}] = 0;
+        
+        if (std::isnan(grad[{i, 0}]))
+            grad[{i, 0}] = 0.f;
     }
 
     if (target == nullptr){
-        std::size_t max_i = 0;
-        if (MEMORY_SIZE > 0 && memoryBuffer.size() > 0){
-            float lmax = -MAXFLOAT;
-            for (std::size_t i(0); i < grad.getNRows(); i++){
-                if (std::abs(grad[{i,0}]) > lmax) {
-                    if (std::find(memoryBuffer.begin(), memoryBuffer.end(), scope_relations[{i, 0}]->second) != memoryBuffer.end()){
-                        grad[{i,0}] = 0.f;
-                    }else{
-                        max_i = i;
-                        lmax = std::abs(grad[{i,0}]);
+        akml::DynamicMatrix<float> softMaxScores = grad;
+        akml::DynamicMatrix<float> softMaxScoresAdjusted(grad.getNRows(), 1);
+        akml::DynamicMatrix<float> softMaxScoresIds(grad.getNRows(), 1);
+        std::size_t nulls = 0;
+        for (std::size_t grad_i(0); grad_i < softMaxScores.getNRows(); grad_i++){
+            if (std::abs(softMaxScores[{grad_i, 0}]) < MIN_GRADIENT_MOVE ||
+                (std::abs(softMaxScores[{grad_i, 0}]) >= MIN_GRADIENT_MOVE && MEMORY_SIZE > 0 && memoryBuffer.size() > 0 &&
+                 std::find_if(memoryBuffer.begin(), memoryBuffer.end(), [&scope_relations, grad_i](const std::pair<Individual*, bool>& element){ return element.first == scope_relations[{grad_i, 0}]->second;}) != memoryBuffer.end())){
+                softMaxScores[{grad_i, 0}] = 0;
+                nulls++;
+            }else {
+                softMaxScoresAdjusted[{grad_i-nulls, 0}] = std::abs(softMaxScores[{grad_i, 0}]);
+                softMaxScoresIds[{grad_i-nulls, 0}] = grad_i;
+            }
+        }
+        softMaxScoresAdjusted.resize(softMaxScores.getNRows()-nulls, 1);
+        softMaxScoresIds.resize(softMaxScores.getNRows()-nulls, 1);
+
+        if (nulls == softMaxScores.getNRows()){
+            if (MEMORY_SIZE > 0 && memoryBuffer.size() > 0){
+                for (std::size_t mem_i(memoryBuffer.size()); mem_i > 0; mem_i--){
+                    if (memoryBuffer.at(mem_i-1).second == true){
+                        memoryBuffer.erase(memoryBuffer.begin() + mem_i-1);
+                        break;
                     }
                 }
             }
-        }else {
-            max_i = akml::arg_max(grad, true);
-        }
-        
-        if (std::abs(grad(max_i+1, 1)) < MIN_LINK_WEIGHT){
             return std::make_tuple(nullptr, nullptr, SocialMatrix::Link (nullptr, nullptr, 0), false);
         }
-    
-        float step = grad(max_i+1, 1);
-        // We do not allow to move with a step that is wider that 0.2
-        step = std::min(step, (float)MAX_LINK_CHANGE);
-        step = std::max(step, (float)-MAX_LINK_CHANGE);
-        
-        float mov = std::max(0.f, ((alpha(max_i+1, 1) < 0.01) ? 0.f : alpha(max_i+1, 1)) + step);
-        
-        if (MEMORY_SIZE > 0){
-            memoryBuffer.push_front(scope_relations[{max_i, 0}]->second);
-            if (memoryBuffer.size() > MEMORY_SIZE)
-                memoryBuffer.pop_back();
-        }
-        SocialMatrix::Link newlinkwanted (true_relations(max_i+1, 1)->first, true_relations(max_i+1, 1)->second, mov);
-        
-        return std::make_tuple(true_relations(max_i+1, 1), scope_relations[{max_i, 0}]->second, newlinkwanted, (grad(max_i+1, 1) <= 0));
-    }else {
-        long int target_i = -1;
-        for (std::size_t i(0); i < scope_relations.getNRows(); i++){
-            if (scope_relations(i+1, 1)->second == target){
-                target_i = i;
-                break;
-            }
-        }
-        
-        // target not found
-        if (target_i == -1)
-            return std::make_tuple(nullptr, nullptr, SocialMatrix::Link (nullptr, nullptr, 0), false);
-        
-        // too little desire
-        if (std::abs(grad(target_i+1, 1)) < MIN_LINK_WEIGHT)
-            return std::make_tuple(true_relations(target_i+1, 1), scope_relations(target_i+1, 1)->second, SocialMatrix::Link (true_relations(target_i+1, 1)->first, true_relations(target_i+1, 1)->second, 0.f), false);
-        
-        float mov = std::max(0.f, ((alpha(target_i+1, 1) <= 0.0001) ? 0.f : alpha(target_i+1, 1)) + grad(target_i+1, 1));
-        
-        return std::make_tuple(true_relations(target_i+1, 1), scope_relations(target_i+1, 1)->second, SocialMatrix::Link (true_relations(target_i+1, 1)->first, true_relations(target_i+1, 1)->second, mov), (grad(target_i+1, 1) <= 0));
-        
+        target_i = 0;
+        if (softMaxScoresAdjusted.getNRows() > 1)
+            target_i = sampleFromSoftmax(softmax(softMaxScoresAdjusted), this->world->getRandomGen());
+            
+        target_i = softMaxScoresIds[{target_i, 0}];
     }
+    
+    //std::cout << this << " wants to ask " << true_relations[{target_i, 0}]->second << " because its current link " << SocialMatrix::sig(alpha[{target_i, 0}]) << " makes him a grad of " << grad[{target_i, 0}] << "\n";
+    float optiWeight = -MAXFLOAT;
+    if (SocialMatrix::sig(alpha[{target_i, 0}]) <= MIN_LINK_WEIGHT2 && grad[{target_i, 0}] <= 0)
+        goto returnsection;
+    
+    if (SocialMatrix::sig(alpha[{target_i, 0}]) == 0){
+        if (SocialMatrix::sig(grad[{target_i, 0}]) < MAX_GRADIENT_MOVE){
+            optiWeight = grad[{target_i, 0}];
+        }else {
+            optiWeight = SocialMatrix::sigInverse(MAX_GRADIENT_MOVE);
+        }
+        goto returnsection;
+    }
+    
+    optiWeight = alpha[{target_i, 0}] + 0.1 * grad[{target_i, 0}];
+    if (SocialMatrix::sig(optiWeight) <= MIN_LINK_WEIGHT2){
+        optiWeight = SocialMatrix::sigInverse(0.f);
+        goto returnsection;
+    }
+    
+    if (std::abs(SocialMatrix::sig(optiWeight) - SocialMatrix::sig(alpha[{target_i, 0}])) <= MIN_GRADIENT_MOVE){
+        optiWeight = alpha[{target_i, 0}];
+        goto returnsection;
+    }
+    
+    if (std::abs(SocialMatrix::sig(optiWeight) - SocialMatrix::sig(alpha[{target_i, 0}])) > MAX_GRADIENT_MOVE){
+        optiWeight = SocialMatrix::sigInverse(SocialMatrix::sig(alpha[{target_i, 0}]) + ((grad[{target_i, 0}] > 0) ? 1.f : -1.f) * MAX_GRADIENT_MOVE);
+    }
+        
+    returnsection:
+    if (optiWeight == alpha[{target_i, 0}] && target == nullptr)
+        return std::make_tuple(nullptr, nullptr, SocialMatrix::Link (nullptr, nullptr, 0), false);
+    
+    
+    //std::cout << this << " wants to go to " << SocialMatrix::sig(optiWeight) << "\n";
+    
+    return std::make_tuple(true_relations[{target_i, 0}], scope_relations[{target_i, 0}]->second, SocialMatrix::Link (true_relations[{target_i, 0}]->first, true_relations[{target_i, 0}]->second, optiWeight), ((target == nullptr && grad[{target_i, 0}] <= 0) || (target != nullptr && optiWeight > alpha[{target_i, 0}])));
     
 }
 
@@ -264,27 +277,73 @@ bool Individual::takeAction(){
     std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> prefAction = Individual::preprocessTakeAction();
     if (std::get<3>(prefAction) && std::get<0>(prefAction) != nullptr){
         this->world->editLink(std::get<0>(prefAction), std::get<2>(prefAction).weight, true, false);
+        this->remember(std::get<1>(prefAction), true);
         return true;
     }else if (std::get<1>(prefAction) != nullptr) {
-        return std::get<1>(prefAction)->responseToAction(this, std::get<2>(prefAction).weight);
+        bool attempt = std::get<1>(prefAction)->responseToAction(this, std::get<2>(prefAction).weight);
+        this->remember(std::get<1>(prefAction), attempt);
+        return attempt;
     }
     return false;
 }
 
 bool Individual::responseToAction(Individual* from, float new_weight){
     std::tuple<SocialMatrix::Link*, Individual*, SocialMatrix::Link, bool> prefAction = Individual::preprocessTakeAction(from);
-    if (std::get<0>(prefAction) != nullptr && std::get<2>(prefAction).weight > 0){
-        if (std::get<2>(prefAction).weight == 0 || std::abs(std::get<2>(prefAction).weight - new_weight) > DEPRECIATION_RATE){
+    if (std::get<0>(prefAction) != nullptr){
+        if (SocialMatrix::sig(std::get<2>(prefAction).weight) > 0 && std::get<3>(prefAction)){
             this->world->editLink(std::get<0>(prefAction), std::min(new_weight, std::get<2>(prefAction).weight), true, false);
             return true;
         }
-    }else if (std::get<0>(prefAction) != nullptr ) {
-        if (std::get<2>(prefAction).weight <= 0){
-            this->world->editLink(std::get<0>(prefAction), new_weight, false, false);
-        }else{
-            std::cout << "\nAsk to respond to action of " << from << " but he is not found" << std::endl;
+        // We allow to reduce an unwanted friendship
+        if (!std::get<3>(prefAction) && SocialMatrix::sig(std::get<2>(prefAction).weight) < std::get<0>(prefAction)->weight){
+            this->world->editLink(std::get<0>(prefAction), std::get<2>(prefAction).weight, true, false);
+            return true;
         }
+        this->world->editLink(std::get<0>(prefAction), new_weight, false, false);
+        return false;
     }
+    throw std::runtime_error("Unable to find the individual that has asked for the relation");
     return false;
 }
 
+void Individual::remember(Individual* target, bool accepted) {
+    if (MEMORY_SIZE > 0){
+        memoryBuffer.push_front(std::make_pair(target, accepted));
+        if (memoryBuffer.size() > MEMORY_SIZE)
+            memoryBuffer.pop_back();
+    }
+}
+
+std::vector<double> Individual::softmax(const akml::DynamicMatrix<float>& logits) {
+    std::vector<double> softmax_probs(logits.getNRows());
+    double max_logit = *std::max_element(logits.getStorage(), logits.getStorageEnd());
+
+    // Numerator of softmax
+    double sum_exp = 0.0;
+    for (std::size_t i(0); i < logits.getNRows(); ++i) {
+        softmax_probs[i] = std::exp(logits[{i,0}] - max_logit);
+        sum_exp += softmax_probs[i];
+    }
+
+    // Denumerator
+    for (std::size_t i(0); i < softmax_probs.size(); ++i)
+        softmax_probs[i] /= sum_exp;
+
+    return softmax_probs;
+}
+
+std::size_t Individual::sampleFromSoftmax(const std::vector<double>& softmaxProbs, std::mt19937& gen) {
+    // Create a random number generator
+    std::uniform_real_distribution<> dis(0.f, 1.f);
+
+    double random_value = dis(gen);
+    double cumulative_sum = 0.f;
+
+    for (std::size_t i(0); i < softmaxProbs.size(); ++i) {
+        cumulative_sum += softmaxProbs[i];
+        if (random_value < cumulative_sum)
+            return i;
+    }
+    // Return the last index if none is selected (due to floating-point issues)
+    return softmaxProbs.size() - 1;
+}

@@ -27,7 +27,7 @@ int main(int argc, const char * argv[]) {
     std::cout << "\nWelcome in the SMS-Simulator ! (v. "<< SMS_VERSION << ")\n";
     std::cout << "This build will generate simulations with " << GRAPH_SIZE << " individuals (MT" << ((float)MAX_THREADS_USAGE)/100 << "). \n";
     
-    std::size_t rounds = 1000;
+    std::size_t rounds = 10000;
     unsigned short int simulationsNb = 1;
     bool shouldITryToFindOptimalGraph = false;
     std::string compatibilityMatExtPath = "";
@@ -54,9 +54,10 @@ int main(int argc, const char * argv[]) {
          akml::CLOption<bool> (&SocialMatrix::COMPUTE_CLUSTERING, "C", "clustering", "Enable/Disable the computing of clustering coefficients", false),
          akml::CLOption<bool> (&shouldICheckLTCondition, "t", "checkLTCond", "Should we check the Love Triangle Condition", Individual::P_DIMENSION < 20),
          akml::CLOption<unsigned short int> (&SocialMatrix::UTILITY_COMPUTATION_INTERVAL, "u", "utFreq", "Frequency of the utility log"),
-         akml::CLOption<bool> (&SocialMatrix::SHOULD_I_LOG, "l", "log", "Should we log results?", true),
+         akml::CLSelectOption<SocialMatrix::LOG_MODE> (&SocialMatrix::SELECTED_LOG_MODE, "l", "log", "Select the log policy (NONE, NO_EDGES, ALL)", {{"NONE", SocialMatrix::LOG_MODE::NONE}, {"NO_EDGES", SocialMatrix::LOG_MODE::NO_EDGES}, {"ALL", SocialMatrix::LOG_MODE::ALL}}),
          akml::CLOption<std::string> (&SocialMatrix::GLOBAL_LOG_PREFIX, "L", "logPrefix", "Select a subfolder for registering logs"),
          akml::CLOption<bool> (&SocialMatrix::MODE_FOLDER_LOG, "lF", "logSubFolder", "Create a subfolder for each simulation"),
+         akml::CLOption<unsigned short int> (&SocialMatrix::INIT_DENSITY_FACTOR, "i", "initDensity", "Initialization density factor [1," + std::to_string(GRAPH_SIZE) + "]"),
          akml::CLOption<std::string> (&adjacencyMatExtPath, "a", "adjacencyFName", "Import adjacency matrix from csv file"),
          akml::CLOption<std::string> (&compatibilityMatExtPath, "c", "compatibilityFName", "Import compatibility matrix from csv file"));
     
@@ -66,7 +67,7 @@ int main(int argc, const char * argv[]) {
         return -1;
     }
     
-    if (SocialMatrix::SHOULD_I_LOG)
+    if (SocialMatrix::SELECTED_LOG_MODE == SocialMatrix::LOG_MODE::ALL || SocialMatrix::SELECTED_LOG_MODE == SocialMatrix::LOG_MODE::NO_EDGES)
         std::cout << "Log mode active. Files will be saved in " << std::filesystem::current_path() << "\n\n";
     
     auto processGame = [&CLOptionsTuple, &shouldITryToFindOptimalGraph, &adjacencyMatExtPath, &compatibilityMatExtPath, &shouldICheckLTCondition](std::size_t rds, std::size_t id, std::size_t batchSize) {
@@ -118,7 +119,7 @@ int main(int argc, const char * argv[]) {
                 std::cout << "Simulation " << id << " / " << batchSize << ": Processing simulation...\n";
                 unsigned short int inactive_consecutive_rounds_counter(0);
                 for (std::size_t i(0); i < rds; i++){
-                    if (inactive_consecutive_rounds_counter == 3 + Individual::MEMORY_SIZE){
+                    if (inactive_consecutive_rounds_counter == MAX_INACTIVE_ROUNDS + Individual::MEMORY_SIZE){
                         std::cout << "Simulation " << id << " / " << batchSize << ": Inactivity detected - Stopping generation at round " << i << "\n";
                         break;
                     }
@@ -130,7 +131,7 @@ int main(int argc, const char * argv[]) {
                 }
             }
         endSimulation:
-         ;
+            ;
         }catch (std::exception& e){
             errorMsgHandler += "Exception: " + (std::string)(e.what()) + " ";
             std::cout << "Simulation " << id << " / " << batchSize << ": Terminated. " << errorMsgHandler << ".\n";
@@ -141,7 +142,7 @@ int main(int argc, const char * argv[]) {
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> duration = end - start;
         
-        if (SocialMatrix::SHOULD_I_LOG){
+        if (SocialMatrix::SELECTED_LOG_MODE == SocialMatrix::LOG_MODE::ALL || SocialMatrix::SELECTED_LOG_MODE == SocialMatrix::LOG_MODE::NO_EDGES){
             std::ofstream cout(std::string(logPath + "SMS-SimulInfos-" + logId +".txt"));
             std::ios_base::sync_with_stdio(false);
             auto *coutbuf = std::cout.rdbuf();

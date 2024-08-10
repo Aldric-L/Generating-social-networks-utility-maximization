@@ -19,11 +19,10 @@ SocialMatrix::SocialMatrix() : gen(std::random_device{}()){
     links.reserve((GRAPH_SIZE*GRAPH_SIZE-GRAPH_SIZE)/2);
     for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
         for (std::size_t indiv_t(0); indiv_t<indiv; indiv_t++){
-            SocialMatrix::links.emplace_back(
-                                                individuals[{indiv,0}],
-                                                individuals[{indiv_t,0}],
-                                                0.f,
-                                                akml::inner_product(individuals[{indiv,0}]->getP(), individuals[{indiv_t,0}]->getP()) / Individual::P_DIMENSION    );
+            SocialMatrix::links.emplace_back(individuals[{indiv,0}],
+                                             individuals[{indiv_t,0}],
+                                             0.f,
+                                             akml::inner_product(individuals[{indiv,0}]->getP(), individuals[{indiv_t,0}]->getP()) / Individual::P_DIMENSION    );
             link_i++;
         }
     }
@@ -69,7 +68,7 @@ void SocialMatrix::forceEditCompatibilityMatrix(const akml::DynamicMatrix<float>
 };
 
 SocialMatrix::~SocialMatrix(){
-    if (SocialMatrix::SHOULD_I_LOG){
+    if (SocialMatrix::SELECTED_LOG_MODE == SocialMatrix::LOG_MODE::ALL || SocialMatrix::SELECTED_LOG_MODE == SocialMatrix::LOG_MODE::NO_EDGES){
         SocialMatrix::VerticesSaveTrackerType* save;
         akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> binaryadjacencymatrix = SocialMatrix::asBinaryAdjacencyMatrix();
         akml::Matrix<std::size_t, GRAPH_SIZE, 1> dijkstra_distance_mat;
@@ -92,7 +91,7 @@ SocialMatrix::~SocialMatrix(){
             if (SocialMatrix::COMPUTE_CLUSTERING)
                 SocialMatrix::clusteringTrackersManager.addSave(SocialMatrix::computeClusteringCoefficients(&binaryadjacencymatrix));
             
-            if (!SocialMatrix::edgeTrackersManager.isEmpty())
+            if (!SocialMatrix::edgeTrackersManager.isEmpty() && SocialMatrix::SELECTED_LOG_MODE == SocialMatrix::LOG_MODE::ALL)
                 SocialMatrix::edgeTrackersManager.saveToCSV(logPath + "SMS-Save-Edges-" + logID + ".csv", false);
             if (!SocialMatrix::utilityTrackersManager.isEmpty())
                 SocialMatrix::utilityTrackersManager.saveToCSV(logPath + "SMS-Save-Utility-" + logID + ".csv", false);
@@ -122,16 +121,19 @@ void SocialMatrix::initializeLinks(){
     for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
         for (std::size_t indiv_t(0); indiv_t<indiv; indiv_t++){
             unsigned short int temp = distribution(gen);
-            if (temp <= 4){
-                SocialMatrix::links[link_i].weight = temp * 0.1;
+            if (temp <= INIT_DENSITY_FACTOR){
+                SocialMatrix::links[link_i].weight = SocialMatrix::sigInverse(/*std::min(temp/(4.f*INIT_DENSITY_FACTOR), (float)MAX_GRADIENT_MOVE/2)*/(float)MAX_GRADIENT_MOVE/2.1 );
+            }else {
+                SocialMatrix::links[link_i].weight = SocialMatrix::sigInverse(0);
             }
         
             // Any link that is to be initialized should be saved
-            edgeTrackersManager.addSave(SocialMatrix::currentRound, SocialMatrix::links[link_i].first->agentid, SocialMatrix::links[link_i].second->agentid, 0, SocialMatrix::links[link_i].weight, true, true);
+            if (SocialMatrix::SELECTED_LOG_MODE == SocialMatrix::LOG_MODE::ALL)
+                edgeTrackersManager.addSave(SocialMatrix::currentRound, SocialMatrix::links[link_i].first->agentid, SocialMatrix::links[link_i].second->agentid, 0, sig(SocialMatrix::links[link_i].weight), true, true);
             link_i++;
         }
     }
-    if (SocialMatrix::SHOULD_I_LOG){
+    if (SocialMatrix::SELECTED_LOG_MODE == SocialMatrix::LOG_MODE::ALL || SocialMatrix::SELECTED_LOG_MODE == SocialMatrix::LOG_MODE::NO_EDGES){
         akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> binaryadjacencymatrix(SocialMatrix::asBinaryAdjacencyMatrix());
         akml::Matrix<std::size_t, GRAPH_SIZE, 1> dijkstra_distance_mat;
         for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
@@ -159,14 +161,15 @@ void SocialMatrix::initializeLinks(const akml::DynamicMatrix<float>& adjacencyMa
     
     for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
         for (std::size_t indiv_t(0); indiv_t<indiv; indiv_t++){
-            SocialMatrix::links[link_i].weight = adjacencyMatrix[{indiv, indiv_t}];
+            SocialMatrix::links[link_i].weight = sigInverse(adjacencyMatrix[{indiv, indiv_t}]);
         
             // Any link that is to be initialized should be saved
-            edgeTrackersManager.addSave(SocialMatrix::currentRound, SocialMatrix::links[link_i].first->agentid, SocialMatrix::links[link_i].second->agentid, 0, SocialMatrix::links[link_i].weight, true, true);
+            if (SocialMatrix::SELECTED_LOG_MODE == SocialMatrix::LOG_MODE::ALL)
+                edgeTrackersManager.addSave(SocialMatrix::currentRound, SocialMatrix::links[link_i].first->agentid, SocialMatrix::links[link_i].second->agentid, 0, sig(SocialMatrix::links[link_i].weight), true, true);
             link_i++;
         }
     }
-    if (SocialMatrix::SHOULD_I_LOG){
+    if (SocialMatrix::SELECTED_LOG_MODE == SocialMatrix::LOG_MODE::ALL || SocialMatrix::SELECTED_LOG_MODE == SocialMatrix::LOG_MODE::NO_EDGES){
         akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> binaryadjacencymatrix(SocialMatrix::asBinaryAdjacencyMatrix());
         akml::Matrix<std::size_t, GRAPH_SIZE, 1> dijkstra_distance_mat;
         for (std::size_t indiv(0); indiv<GRAPH_SIZE; indiv++){
@@ -234,7 +237,7 @@ std::vector<SocialMatrix::Link> SocialMatrix::getIndividualScope(Individual* ind
     }else {
         akml::Matrix<SocialMatrix::Link*, GRAPH_SIZE-1, 1> linksofIndividual(SocialMatrix::getIndividualRelations(indiv));
         for (std::size_t level0(0); level0 < GRAPH_SIZE-1; level0++){
-            if (linksofIndividual[{level0, 0}]->weight > 0){
+            if (sig(linksofIndividual[{level0, 0}]->weight) > 0){
                 Individual* target = (linksofIndividual[{level0, 0}]->first == indiv) ? linksofIndividual[{level0, 0}]->second : linksofIndividual[{level0, 0}]->first;
                 
                 if (target == original)
@@ -243,7 +246,7 @@ std::vector<SocialMatrix::Link> SocialMatrix::getIndividualScope(Individual* ind
                 Link l;
                 l.first = original;
                 l.second = target;
-                l.weight = (original == indiv) ? linksofIndividual[{level0, 0}]->weight : 0;
+                l.weight = (original == indiv) ? linksofIndividual[{level0, 0}]->weight : findRelation(original, target)->weight;
                 l.compatibility = (original == indiv) ? linksofIndividual[{level0, 0}]->compatibility : getCompatibilityBtwnIndividuals(original, target);
                 scope.push_back(l);
                 
@@ -284,42 +287,45 @@ void SocialMatrix::editLink(const Individual* indiv1, const Individual* indiv2, 
 }
 
 void SocialMatrix::editLink(SocialMatrix::Link* link, const float newWeight, bool accepted, bool forced) {
+    assert(sig(newWeight) < 1 && sig(newWeight) >= 0);
     if (link == nullptr)
         throw std::invalid_argument("Attempting to edit a non-consistent link");
 
     // We truly forbid insignificant moves that are inflating the log and keeping the simulation running forever
-    if (!forced && accepted && newWeight > 0 && newWeight < MIN_LINK_WEIGHT){
+    if (!forced && accepted && sig(newWeight) > 0 && sig(newWeight) < MIN_LINK_WEIGHT){
         if (newWeight < link->weight){
-            edgeTrackersManager.addSave(SocialMatrix::currentRound, link->first->agentid, link->second->agentid, link->weight, 0, accepted, forced);
-            link->weight = newWeight;
+            if (SocialMatrix::SELECTED_LOG_MODE == SocialMatrix::LOG_MODE::ALL)
+                edgeTrackersManager.addSave(SocialMatrix::currentRound, link->first->agentid, link->second->agentid, sig(link->weight), 0, accepted, forced);
+            link->weight = SocialMatrix::sigInverse(0);
         }
         else{
             std::cerr << "Forbidden link: " << link->weight << " - " << newWeight <<" \n";
         }
         return;
     }
-        
-    edgeTrackersManager.addSave(SocialMatrix::currentRound, link->first->agentid, link->second->agentid, link->weight, newWeight, accepted, forced);
+    //std::cout << "Individuals " <<link->first << " - " << link->second << " change from " << sig(link->weight) << " to " << sig(newWeight) << " Accepted: " << accepted << "\n";
+    if (SocialMatrix::SELECTED_LOG_MODE == SocialMatrix::LOG_MODE::ALL)
+        edgeTrackersManager.addSave(SocialMatrix::currentRound, link->first->agentid, link->second->agentid, sig(link->weight), sig(newWeight), accepted, forced);
     if (accepted || forced)
         link->weight = newWeight;
 }
 
 
-unsigned int SocialMatrix::processARound(std::size_t totalrounds) {
+std::size_t SocialMatrix::processARound(std::size_t totalrounds) {
     if (SocialMatrix::COMPUTE_CLEARING){
         // Test implementation of a usure of weights and a clearing of small weights
-        if (SocialMatrix::currentRound != 0 && SocialMatrix::currentRound != 1 && SocialMatrix::currentRound != totalrounds && SocialMatrix::currentRound % 10 == 0){
+        if (SocialMatrix::currentRound != 0 && SocialMatrix::currentRound != 1 && (float)SocialMatrix::currentRound/(float)totalrounds>0.1 && SocialMatrix::currentRound != totalrounds && SocialMatrix::currentRound % 10 == 0){
             for (std::size_t link_id(0); link_id < SocialMatrix::links.size(); link_id++){
-                if (links[link_id].weight > 0 && links[link_id].weight < (MIN_LINK_WEIGHT + DEPRECIATION_RATE))
-                    SocialMatrix::editLink(&links[link_id], 0, true, true);
-                else if (links[link_id].weight > 0)
-                    SocialMatrix::editLink(&links[link_id], links[link_id].weight-DEPRECIATION_RATE, true, true);
+                if (SocialMatrix::sig(links[link_id].weight) > 0 && SocialMatrix::sig(links[link_id].weight) < (MIN_LINK_WEIGHT2 + DEPRECIATION_RATE))
+                    SocialMatrix::editLink(&links[link_id], SocialMatrix::sigInverse(0), true, true);
+                else if (SocialMatrix::sig(links[link_id].weight) > 0 && DEPRECIATION_RATE>0)
+                    SocialMatrix::editLink(&links[link_id], SocialMatrix::sigInverse(SocialMatrix::sig(links[link_id].weight)-DEPRECIATION_RATE), true, true);
             }
         }
     }
         
     std::uniform_int_distribution<std::size_t> distribution(0,GRAPH_SIZE-1);
-    unsigned int inactions(0);
+    std::size_t inactions(0);
     
     std::size_t start_indiv = distribution(gen);
     
@@ -355,8 +361,8 @@ unsigned int SocialMatrix::processARound(std::size_t totalrounds) {
 akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> SocialMatrix::asAdjacencyMatrix() const{
     akml::Matrix<float, GRAPH_SIZE, GRAPH_SIZE> output;
     for (std::size_t l(0); l<links.size(); l++){
-        output(SocialMatrix::links[l].first->agentid+1, SocialMatrix::links[l].second->agentid+1) = SocialMatrix::links[l].weight;
-        output(SocialMatrix::links[l].second->agentid+1, SocialMatrix::links[l].first->agentid+1) = SocialMatrix::links[l].weight;
+        output(SocialMatrix::links[l].first->agentid+1, SocialMatrix::links[l].second->agentid+1) = sig(SocialMatrix::links[l].weight);
+        output(SocialMatrix::links[l].second->agentid+1, SocialMatrix::links[l].first->agentid+1) = sig(SocialMatrix::links[l].weight);
     }
     return output;
 }
@@ -369,8 +375,8 @@ akml::Matrix<bool, GRAPH_SIZE, GRAPH_SIZE> SocialMatrix::asBinaryAdjacencyMatrix
         }
     }else {
         for (std::size_t l(0); l<links.size(); l++){
-            localmatrix(SocialMatrix::links[l].first->agentid+1, SocialMatrix::links[l].second->agentid+1) = (SocialMatrix::links[l].weight > 0.005) ? 1 : 0;
-            localmatrix(SocialMatrix::links[l].second->agentid+1, SocialMatrix::links[l].first->agentid+1) = (SocialMatrix::links[l].weight > 0.005) ? 1 : 0;
+            localmatrix(SocialMatrix::links[l].first->agentid+1, SocialMatrix::links[l].second->agentid+1) = (sig(SocialMatrix::links[l].weight) > 0.005) ? 1 : 0;
+            localmatrix(SocialMatrix::links[l].second->agentid+1, SocialMatrix::links[l].first->agentid+1) = (sig(SocialMatrix::links[l].weight) > 0.005) ? 1 : 0;
         }
     }
     return localmatrix;

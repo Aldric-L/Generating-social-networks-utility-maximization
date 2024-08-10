@@ -7,7 +7,7 @@
 
 #include "CMakeConsts.h"
 
-#define SMS_VERSION "0.61 04/08/24"
+#define SMS_VERSION "0.70 08/08/24"
 
 #include <stdio.h>
 #include <iostream>
@@ -34,11 +34,19 @@
 #endif
 
 #define MODE_ECO_LOG 0
-//#define MODE_FOLDER_LOG 1
 
-#define DEPRECIATION_RATE (0.001)
-#define MIN_LINK_WEIGHT (0.005)
-#define MAX_LINK_CHANGE (0.15)
+#define DEPRECIATION_RATE (0)
+//#define MIN_LINK_WEIGHT (0.005)
+#define MIN_LINK_WEIGHT (-MAXFLOAT)
+#define MAX_LINK_CHANGE (0.1)
+
+
+#define MIN_LINK_WEIGHT2 0.05
+#define MIN_GRADIENT_MOVE (0.0001)
+#define MAX_GRADIENT_MOVE (0.1)
+
+#define MAX_INACTIVE_ROUNDS (50)
+
 
 #ifndef Constants_h
 #define Constants_h
