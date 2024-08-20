@@ -58,8 +58,8 @@ int main(int argc, const char * argv[]) {
          akml::CLOption<std::string> (&SocialMatrix::GLOBAL_LOG_PREFIX, "L", "logPrefix", "Select a subfolder for registering logs"),
          akml::CLOption<bool> (&SocialMatrix::MODE_FOLDER_LOG, "lF", "logSubFolder", "Create a subfolder for each simulation"),
          akml::CLOption<unsigned short int> (&SocialMatrix::INIT_DENSITY_FACTOR, "i", "initDensity", "Initialization density factor [1," + std::to_string(GRAPH_SIZE) + "]"),
-         akml::CLOption<std::string> (&adjacencyMatExtPath, "a", "adjacencyFName", "Import adjacency matrix from csv file"),
-         akml::CLOption<std::string> (&compatibilityMatExtPath, "c", "compatibilityFName", "Import compatibility matrix from csv file"));
+         akml::CLOption<std::string> (&adjacencyMatExtPath, "A", "adjacencyFName", "Import adjacency matrix from csv file"),
+         akml::CLOption<std::string> (&compatibilityMatExtPath, "Co", "compatibilityFName", "Import compatibility matrix from csv file"));
     
     try {
         akml::CLManager localCLManager(argc, argv, CLOptionsTuple);

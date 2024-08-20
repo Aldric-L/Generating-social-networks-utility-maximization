@@ -27,7 +27,8 @@ SocialMatrix::SocialMatrix() : gen(std::random_device{}()){
         }
     }
     
-    long int t = static_cast<long int> (std::clock());
+    std::uniform_int_distribution<long int> distribution(0,1000);
+    long int t = static_cast<long int> (std::clock()) + distribution(gen);;
     logID = std::to_string(t);
     
     logPath = GLOBAL_LOG_PREFIX;
