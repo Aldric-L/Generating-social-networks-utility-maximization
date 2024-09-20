@@ -1,7 +1,10 @@
-#  Social Matrix Simulation
-### SMS Associates Yann Kerzreho & Aldric Labarthe @ ENS Paris-Saclay - 2023-2024
+# SOCIAL NETWORKS AS A UTILITY MAXIMIZATION DECISION
+### SMS Associates Yann Kerzreho & Aldric Labarthe @ ENS Paris-Saclay - 2023-2024 - Social Matrix Simulation
 
 Our model is a bilateral network of agents where each of them play iteratively to optimize their own utility. In this purpose they optimize the weights of their relations within a given scope. Each node/agent has its own carateristics. The model is provided in two forms: a global optimization problem and a round by round simulation with imperfect information.
+
+## Paper and reproducibility
+All data used in the paper and all the statistical analysis performed is available in the folder Paper. The file PaperMain.R can regerate all tables, where all the other files are R functions for reproducibility. The data is available in two compressed folder at this link ([https://1drv.ms/f/s!An5zxDZ6MkIwo4JOOjl38hN-FeKA-A?e=pnTXqT](https://1drv.ms/f/s!An5zxDZ6MkIwo4JOOjl38hN-FeKA-A?e=pnTXqT)) with both the simulations outputs and inputs. Beware that paths may not be properly configured as these documents are not meant to be executed but are provided for full transparency. 
 
 ## Usage
 
@@ -42,27 +45,31 @@ Use the flag -h to ask for help!
 ```
 Usage: ./SocialMatrixSimulation [options]
 Options:
-  -R --rounds                       How many rounds?
-  -S --simuls                       How many simulations?
-  -O --optiGraph                    Should I compute optimal graph?
-  -op --optiPrecision               Precision of the optimal graph 1e{-x}?
-  -P --dimP                         Dimension of the vector of personnality
-  -m --memLength                    Length of the memory of past requests
-  -s --greedyS                      Share of greedy individuals [0,100]
-  -f --greedyF                      Frequency of the greedy bonus [0,100]
-  -D --delta                        Utility parameter
-  -K --kappa                        Utility parameter
-  -G --gamma                        Utility parameter
-  -g --gammaDisp                    Dispersion of the utility parameter gamma
-  -p --htroP                        Enable/Disable the two groups of P
-  -c --clearing                     Enable/Disable the clearing and decaying mechanism
-  -C --clustering                   Enable/Disable the computing of clustering coefficients
-  -t --checkLTCond                  Should we check the Love Triangle Condition
-  -u --utFreq                       Frequency of the utility log
-  -l --log                          Should we log results?
-  -L --logPrefix                    Select a subfolder for registering logs
-  -a --adjacencyFName               Import adjacency matrix from csv file
-  -c --compatibilityFName           Import compatibility matrix from csv file
+  -R --rounds                                How many rounds?
+  -S --simuls                                How many simulations?
+  -O --optiGraph                             Should I compute optimal graph?
+  -op --optiPrecision                        Precision of the optimal graph 1e{-x}?
+  -oi --optiIt                               Max. Iterations for finding the optimal graph
+  -P --dimP                                  Dimension of the vector of personnality
+  -m --memLength                             Length of the memory of past requests
+  -s --greedyS                               Share of greedy individuals [0,100]
+  -f --greedyF                               Frequency of the greedy bonus [0,100]
+  -d --scopeDepth                            Individuals' scope depth in the network
+  -D --delta                                 Utility parameter
+  -K --kappa                                 Utility parameter
+  -G --gamma                                 Utility parameter
+  -g --gammaDisp                             Dispersion of the utility parameter gamma
+  -p --htroP                                 Enable/Disable the two groups of P
+  -c --clearing                              Enable/Disable the clearing and decaying mechanism
+  -C --clustering                            Enable/Disable the computing of clustering coefficients
+  -t --checkLTCond                           Should we check the Love Triangle Condition
+  -u --utFreq                                Frequency of the utility log
+  -l --log                                   Select the log policy (NONE, NO_EDGES, ALL)
+  -L --logPrefix                             Select a subfolder for registering logs
+  -lF --logSubFolder                         Create a subfolder for each simulation
+  -i --initDensity                           Initialization density factor [1,64]
+  -A --adjacencyFName                        Import adjacency matrix from csv file
+  -Co --compatibilityFName                   Import compatibility matrix from csv file
 ```
 
 Note:
