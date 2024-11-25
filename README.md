@@ -1,9 +1,14 @@
-# SOCIAL NETWORKS AS A UTILITY MAXIMIZATION DECISION
+# Generating social networks with static and dynamic utility-maximization approaches
 ### SMS Associates Yann Kerzreho & Aldric Labarthe @ ENS Paris-Saclay - 2023-2024 - Social Matrix Simulation
+
+>In this paper, we introduce a conceptual framework that model human social networks as an undirected dot-product graph of independent individuals. Their relationships are only determined by a cost-benefit analysis, i.e. by maximizing an objective function at the scale of the individual or of the whole network. On this framework, we build a new artificial network generator in two versions. The first fits within the tradition of artificial network generators by being able to generate similar networks from empirical data. The second relaxes the computational efficiency constraint and implements the same micro-based decision algorithm, but in agent-based simulations with time and fully independent agents. This latter version enables social scientists to perform an in-depth analysis of the consequences of behavioral constraints affecting individuals on the network they form. This point is illustrated by a case study of imperfect information.
 
 Our model is a bilateral network of agents where each of them play iteratively to optimize their own utility. In this purpose they optimize the weights of their relations within a given scope. Each node/agent has its own carateristics. The model is provided in two forms: a global optimization problem and a round by round simulation with imperfect information.
 
 ## Paper and reproducibility
+
+The pre-print of the paper is available [in the folder paper](https://github.com/Aldric-L/Generating-social-networks-utility-maximization/blob/main/Paper/SMS%20arXiv%20Preview.pdf) with its supplementary materials under the [CC-BY-NC-SA licence](https://creativecommons.org/licenses/by-nc-sa/4.0/). 
+
 All data used in the paper and all the statistical analysis performed is available in the folder Paper. The file PaperMain.R can regerate all tables, where all the other files are R functions for reproducibility. The data is available in two compressed folder at this link ([https://1drv.ms/f/s!An5zxDZ6MkIwo4JOOjl38hN-FeKA-A?e=pnTXqT](https://1drv.ms/f/s!An5zxDZ6MkIwo4JOOjl38hN-FeKA-A?e=pnTXqT)) with both the simulations outputs and inputs. Beware that paths may not be properly configured as these documents are not meant to be executed but are provided for full transparency. 
 
 ## Usage
