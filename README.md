@@ -7,7 +7,7 @@ Our model is a bilateral network of agents where each of them play iteratively t
 
 ## Paper and reproducibility
 
-The pre-print of the paper is available [in the folder paper](https://github.com/Aldric-L/Generating-social-networks-utility-maximization/blob/main/Paper/SMS%20arXiv%20Preview.pdf) with its supplementary materials under the [CC-BY-NC-SA licence](https://creativecommons.org/licenses/by-nc-sa/4.0/). 
+The pre-print of the paper is available [on arXiv (arXiv:2411.16464)]([https://github.com/Aldric-L/Generating-social-networks-utility-maximization/blob/main/Paper/SMS%20arXiv%20Preview.pdf](https://arxiv.org/abs/2411.16464)) with its supplementary materials under the [CC-BY-NC-SA licence](https://creativecommons.org/licenses/by-nc-sa/4.0/). 
 
 All data used in the paper and all the statistical analysis performed are available in the folder Paper. The file PaperMain.R can regerate all tables, whereas all the other files are R functions for reproducibility. The data is available in two compressed folders at this link ([https://1drv.ms/f/s!An5zxDZ6MkIwo4JOOjl38hN-FeKA-A?e=pnTXqT](https://1drv.ms/f/s!An5zxDZ6MkIwo4JOOjl38hN-FeKA-A?e=pnTXqT)) with both the simulations outputs and inputs. Beware that paths may not be properly configured as these documents are not meant to be executed but are provided for full transparency. 
 
